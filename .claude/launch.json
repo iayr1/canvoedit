@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "canvo-web",
+      "runtimeExecutable": "flutter.bat",
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8123", "--web-hostname", "localhost"],
+      "port": 8123
+    }
+  ]
+}
