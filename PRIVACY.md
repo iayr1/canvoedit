@@ -43,4 +43,4 @@ information.
 
 ## Contact
 
-Questions about this policy or your privacy: myodimensions@gmail.com
+Questions about this policy or your privacy: mayurailead@gmail.com
