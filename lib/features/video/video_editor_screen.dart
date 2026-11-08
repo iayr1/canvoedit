@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/theme.dart';
 import '../../canvas/canvas_view.dart';
 import '../../canvas/layer.dart';
 import '../../core/media.dart';
+import '../../core/media_picker.dart';
 import '../shared/grade_panels.dart';
 import '../shared/layer_panels.dart';
+import 'clip_tools.dart';
 import 'export_engine.dart';
 import 'playback_engine.dart';
 import 'timeline_view.dart';
@@ -16,7 +22,7 @@ import 'video_export_sheet.dart';
 import 'video_preview.dart';
 import 'video_project.dart';
 
-enum _Panel { filters, adjust, speed, volume, transition, stickers, format, textStyle, audio }
+enum _Panel { filters, adjust, speed, volume, transition, stickers, format, textStyle, audio, voiceover }
 
 class VideoEditorScreen extends StatefulWidget {
   const VideoEditorScreen({super.key, required this.project});
@@ -29,9 +35,13 @@ class VideoEditorScreen extends StatefulWidget {
 class _VideoEditorScreenState extends State<VideoEditorScreen> {
   late final VideoController _c = VideoController(widget.project);
   late final PlaybackEngine _engine = PlaybackEngine(() => _c.project);
-  final _picker = ImagePicker();
   _Panel? _panel;
   bool _importing = false;
+  final _recorder = AudioRecorder();
+  Timer? _recorderTicker;
+  final _recordClock = Stopwatch();
+  String? _recordPath;
+  int _recordStartMs = 0;
 
   @override
   void initState() {
@@ -42,11 +52,19 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     for (final c in _c.project.clips) {
       if (c.kind == ClipKind.image) ImageBank.instance.load(c.path).ignore();
     }
+    final missing = missingMediaCount(_c.project);
+    if (missing > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _snack('$missing media file${missing == 1 ? ' is' : 's are'} missing from this project');
+      });
+    }
   }
 
   @override
   void dispose() {
     ImageBank.instance.removeListener(_engine.refresh);
+    _recorderTicker?.cancel();
+    _recorder.dispose();
     _engine.dispose();
     _c.flush();
     _c.dispose();
@@ -61,12 +79,12 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   }
 
   Future<void> _addMedia() async {
-    final files = await _picker.pickMultipleMedia();
+    final files = await MediaPicker.media(onError: _snack);
     await _importFiles(files);
   }
 
   Future<void> _record() async {
-    final file = await _picker.pickVideo(source: ImageSource.camera);
+    final file = await MediaPicker.recordVideo(onError: _snack);
     if (file != null) await _importFiles([file]);
   }
 
@@ -117,8 +135,8 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   }
 
   Future<void> _addMusic() async {
-    final result = await FilePicker.pickFiles(type: FileType.audio);
-    if (result.isEmpty) return;
+    final result = await MediaPicker.guard(() => FilePicker.pickFiles(type: FileType.audio), onError: _snack);
+    if (result == null || result.isEmpty) return;
     final picked = result.first;
     if (picked.path == null) return;
     final path = await MediaLibrary.import(XFile(picked.path!, name: picked.name));
@@ -126,6 +144,136 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     final duration = probe.durationMs ?? await _playerDuration(path);
     _c.addAudio(AudioTrack(path: path, name: picked.name, sourceMs: duration, startMs: _engine.positionMs));
     setState(() => _panel = _Panel.audio);
+  }
+
+  Future<void> _addOverlayImage() async {
+    final file = await MediaPicker.image(onError: _snack);
+    if (file == null) return;
+    final path = await MediaLibrary.import(file);
+    final image = await ImageBank.instance.load(path);
+    _c.addOverlay(CanvasLayer.image(path, image.width, image.height, width: .4), _engine.positionMs);
+  }
+
+  bool get _isRecording => _recordPath != null;
+
+  Future<void> _startVoiceover() async {
+    if (!await _recorder.hasPermission()) {
+      _snack('Microphone access is needed to record a voiceover');
+      return;
+    }
+    final dir = await ClipTools.outputDir();
+    final path = '${dir.path}/voice-${newId()}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    _recordStartMs = _engine.positionMs;
+    _recordClock
+      ..reset()
+      ..start();
+    _recorderTicker = Timer.periodic(const Duration(milliseconds: 200), (_) => setState(() {}));
+    // The video plays silently, so you can watch it while you talk.
+    _engine.muted = true;
+    _engine.play();
+    setState(() => _recordPath = path);
+  }
+
+  Future<void> _stopVoiceover() async {
+    final started = _recordStartMs;
+    final elapsed = _recordClock.elapsedMilliseconds;
+    _recorderTicker?.cancel();
+    _recordClock.stop();
+    _engine
+      ..pause()
+      ..muted = false;
+    final path = await _recorder.stop();
+    setState(() => _recordPath = null);
+    if (path == null) {
+      _snack('The recording could not be saved');
+      return;
+    }
+    final probe = await ExportEngine.probe(path);
+    final length = probe.durationMs ?? elapsed;
+    _c.addAudio(AudioTrack(path: path, name: 'Voiceover', sourceMs: length, startMs: started, volume: 1));
+    _engine.seek(started);
+  }
+
+  /// Runs a processing job behind a progress dialog that can be cancelled.
+  Future<void> _runTool(String title, Future<ClipToolResult> Function(ValueChanged<double> onProgress) job, void Function(ClipToolResult) apply) async {
+    _engine.pause();
+    final progress = ValueNotifier<double>(0);
+    var cancelled = false;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(title),
+          content: ValueListenableBuilder<double>(
+            valueListenable: progress,
+            builder: (_, v, _) => LinearProgressIndicator(value: v == 0 ? null : v),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                ExportEngine.cancel();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+    await WakelockPlus.enable();
+    ClipToolResult? result;
+    Object? failure;
+    try {
+      result = await job((v) => progress.value = v);
+    } catch (e) {
+      failure = e;
+    } finally {
+      await WakelockPlus.disable();
+    }
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    progress.dispose();
+    if (cancelled) return;
+    if (result == null) {
+      debugPrint('$title failed: $failure');
+      _snack('$title did not finish. Please try again.');
+      return;
+    }
+    apply(result);
+  }
+
+  void _reverse(VideoClip clip) {
+    if (clip.outMs - clip.inMs > ClipTools.maxReverseMs) {
+      _snack('Trim the clip to 1 minute or less to reverse it');
+      return;
+    }
+    _runTool('Reversing clip', (p) => ClipTools.reverse(clip, p), (r) {
+      _c.replaceSource(clip, path: r.path, sourceMs: r.durationMs, hasAudio: clip.hasAudio);
+    });
+  }
+
+  void _denoise(VideoClip clip) {
+    if (!clip.hasAudio) {
+      _snack('This clip has no sound to clean up');
+      return;
+    }
+    _runTool('Reducing background noise', (p) => ClipTools.denoise(clip, p), (r) {
+      _c.replaceSource(clip, path: r.path, sourceMs: clip.sourceMs, hasAudio: true, resetTrim: false);
+    });
+  }
+
+  void _detachAudio(VideoClip clip) {
+    if (!clip.hasAudio || clip.volume == 0) {
+      _snack('This clip has no sound to detach');
+      return;
+    }
+    final start = _c.project.startOf(_c.project.clips.indexOf(clip));
+    _runTool('Detaching audio', (p) => ClipTools.extractAudio(clip, p), (r) {
+      _c.detachAudio(clip, AudioTrack(path: r.path, name: 'Clip audio', sourceMs: r.durationMs, startMs: start, volume: clip.volume.clamp(0.0, 1.0).toDouble()));
+    });
   }
 
   Future<void> _addText() async {
@@ -251,23 +399,27 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       listenable: _engine,
       builder: (context, _) => SizedBox(
         height: 44,
-        child: Row(
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            const SizedBox(width: 12),
-            Text(
-              '${_time(_engine.positionMs)} / ${_time(project.durationMs)}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted, fontFeatures: [FontFeature.tabularFigures()]),
+            Positioned(
+              left: 12,
+              child: Text(
+                '${_time(_engine.positionMs)} / ${_time(project.durationMs)}',
+                style: const TextStyle(fontSize: 12, color: AppColors.muted, fontFeatures: [FontFeature.tabularFigures()]),
+              ),
             ),
-            const Spacer(),
             IconButton(
               tooltip: _engine.playing ? 'Pause' : 'Play',
               iconSize: 30,
               icon: Icon(_engine.playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
               onPressed: project.clips.isEmpty ? null : _engine.togglePlay,
             ),
-            const Spacer(),
-            if (_importing) const Padding(padding: EdgeInsets.only(right: 16), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
-            if (!_importing) const SizedBox(width: 90),
+            if (_importing)
+              const Positioned(
+                right: 16,
+                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
           ],
         ),
       ),
@@ -323,6 +475,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             _c.commit();
           },
         ),
+        if (isVideo) ToolButton(icon: Icons.fast_rewind_outlined, label: 'Reverse', onTap: () => _reverse(clip)),
+        if (isVideo) ToolButton(icon: Icons.graphic_eq, label: 'Denoise', onTap: () => _denoise(clip)),
+        if (isVideo) ToolButton(icon: Icons.call_split, label: 'Detach audio', onTap: () => _detachAudio(clip)),
         ToolButton(icon: Icons.arrow_back, label: 'Move left', onTap: () => _c.moveClip(clip, -1)),
         ToolButton(icon: Icons.arrow_forward, label: 'Move right', onTap: () => _c.moveClip(clip, 1)),
         ToolButton(icon: Icons.copy, label: 'Duplicate', onTap: () => _c.duplicateClip(clip)),
@@ -347,7 +502,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         ToolButton(icon: Icons.content_cut, label: 'Split', onTap: _c.project.clips.isEmpty ? null : _split),
         ToolButton(icon: Icons.title, label: 'Text', onTap: _addText),
         ToolButton(icon: Icons.emoji_emotions_outlined, label: 'Stickers', active: _panel == _Panel.stickers, onTap: () => _togglePanel(_Panel.stickers)),
+        ToolButton(icon: Icons.add_photo_alternate_outlined, label: 'Image', onTap: _addOverlayImage),
         ToolButton(icon: Icons.music_note_outlined, label: 'Music', onTap: _addMusic),
+        ToolButton(icon: Icons.mic_none, label: 'Voiceover', active: _panel == _Panel.voiceover, onTap: _c.project.clips.isEmpty ? null : () => _togglePanel(_Panel.voiceover)),
         ToolButton(icon: Icons.aspect_ratio, label: 'Format', active: _panel == _Panel.format, onTap: () => _togglePanel(_Panel.format)),
       ];
     }
@@ -389,6 +546,26 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         });
       case _Panel.format:
         return _formatPanel();
+      case _Panel.voiceover:
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              FilledButton.icon(
+                onPressed: _isRecording ? _stopVoiceover : _startVoiceover,
+                icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                label: Text(_isRecording ? 'Stop' : 'Record'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _isRecording ? 'Recording ${_time(_recordClock.elapsedMilliseconds)}' : 'Records from the playhead while the video plays silently.',
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ),
+            ],
+          ),
+        );
       case _Panel.textStyle:
         final overlay = _c.selectedOverlay;
         if (overlay == null || overlay.kind != LayerKind.text) return const _SelectHint('Select a text layer first.');

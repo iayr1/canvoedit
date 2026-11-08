@@ -1,14 +1,15 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../app/theme.dart';
 import '../../canvas/canvas_view.dart';
 import '../../canvas/document.dart';
+import '../../canvas/image_export.dart';
 import '../../canvas/layer.dart';
 import '../../canvas/renderer.dart';
 import '../../core/media.dart';
+import '../../core/media_picker.dart';
 import '../../core/output.dart';
 import '../shared/grade_panels.dart';
 import '../shared/layer_panels.dart';
@@ -29,7 +30,6 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen> {
   late final EditorController _c = EditorController(widget.document);
-  final _picker = ImagePicker();
   late _Tool? _tool = widget.document.isPhoto ? _Tool.filters : null;
   int _drawColor = 0xFFFF5C39;
   double _drawWidth = .012;
@@ -84,7 +84,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<void> _addImage() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery);
+    final file = await MediaPicker.image(onError: _snack);
     if (file == null) return;
     final path = await MediaLibrary.import(file);
     final image = await ImageBank.instance.load(path);
@@ -527,10 +527,11 @@ class _ExportSheet extends StatefulWidget {
 
 class _ExportSheetState extends State<_ExportSheet> {
   double _scale = 1;
+  ImageExportFormat _format = ImageExportFormat.png;
   bool _busy = false;
   String? _message;
 
-  String get _fileName => '${widget.doc.name.replaceAll(RegExp(r'[^\w-]+'), '_')}.png';
+  String get _fileName => '${widget.doc.name.replaceAll(RegExp(r'[^\w-]+'), '_')}.${_format.extension}';
 
   Future<void> _run(Future<void> Function(Uint8List bytes) action, String done) async {
     setState(() {
@@ -538,7 +539,7 @@ class _ExportSheetState extends State<_ExportSheet> {
       _message = null;
     });
     try {
-      final bytes = await SceneRenderer.exportPng(widget.doc, scale: _scale);
+      final bytes = await exportDocument(widget.doc, _format, scale: _scale);
       await action(bytes);
       if (mounted) setState(() => _message = done);
     } catch (e) {
@@ -558,8 +559,16 @@ class _ExportSheetState extends State<_ExportSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Export PNG', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const Text('Export', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
+            SegmentedButton<ImageExportFormat>(
+              segments: [
+                for (final f in ImageExportFormat.values) ButtonSegment(value: f, label: Text(f.label)),
+              ],
+              selected: {_format},
+              onSelectionChanged: (s) => setState(() => _format = s.first),
+            ),
+            const SizedBox(height: 8),
             SegmentedButton<double>(
               segments: const [
                 ButtonSegment(value: .5, label: Text('0.5x')),
@@ -572,12 +581,14 @@ class _ExportSheetState extends State<_ExportSheet> {
             const SizedBox(height: 8),
             Text('$w × $h px', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
             const SizedBox(height: 14),
-            FilledButton.icon(
-              onPressed: _busy ? null : () => _run((b) => Output.saveImage(b, _fileName), 'Saved to your gallery'),
-              icon: const Icon(Icons.download),
-              label: const Text('Save to gallery'),
-            ),
-            const SizedBox(height: 8),
+            if (_format != ImageExportFormat.pdf) ...[
+              FilledButton.icon(
+                onPressed: _busy ? null : () => _run((b) => Output.saveImage(b, _fileName), 'Saved to your gallery'),
+                icon: const Icon(Icons.download),
+                label: const Text('Save to gallery'),
+              ),
+              const SizedBox(height: 8),
+            ],
             OutlinedButton.icon(
               onPressed: _busy ? null : () => _run((b) => Output.shareBytes(b, _fileName), 'Shared'),
               icon: const Icon(Icons.share),

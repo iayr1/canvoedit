@@ -41,7 +41,7 @@ Marked against the products Canvo Edit is inspired by. "Partial" says what's mis
 
 | Feature | Status |
 | --- | --- |
-| 59 original filters in 10 categories, with strength control | Built |
+| 389 original filters in 19 categories, with strength control | Built: 59 hand-tuned looks, plus 30 base looks in 11 variations each |
 | Exposure, brightness, contrast, fade, saturation, temperature, tint, hue, sepia, vignette | Built |
 | Crop, aspect ratios, rotate, flip | Built |
 | Text, stickers, shapes, drawing, image layers | Built |
@@ -53,12 +53,12 @@ Marked against the products Canvo Edit is inspired by. "Partial" says what's mis
 | Feature | Status |
 | --- | --- |
 | Canvas presets for social, print and presentations | Built |
-| 10 original templates, fully editable | Built |
+| 374 original templates in 26 topics, searchable, fully editable | Built: 10 hand-made, plus 364 generated from 14 layouts, 20 palettes and 10 font pairings |
 | Layers: move, pinch or handle to scale and rotate, order, lock, hide, opacity, duplicate | Built |
 | Snap to centre, 16 fonts, solid and gradient backgrounds | Built |
-| PNG export at 0.5x, 1x, 2x | Built |
-| Stock library, thousands of templates, brand kits | Not yet: needs content and a backend |
-| PDF export, multi-page designs | Not yet |
+| PNG, JPG and single-page PDF export at 0.5x, 1x, 2x | Built |
+| Stock photo library, brand kits | Not yet: needs licensed content and a backend |
+| Multi-page designs | Not yet |
 | Real-time collaboration, accounts, cloud sync | Not yet: needs a backend |
 
 ### Video editing (Premiere, Resolve and Edits-style)
@@ -71,15 +71,17 @@ Marked against the products Canvo Edit is inspired by. "Partial" says what's mis
 | 8 transitions | Built: the preview approximates the exact export look |
 | Filters and adjustments on each clip | Built |
 | Shadow and highlight colour grading | Partial: lift and gain only, no colour wheels or curves |
-| Timed text and sticker overlays | Built |
+| Timed text, sticker and image overlays | Built |
 | Music tracks with volume and fades | Built |
 | Format presets (9:16, 1:1, 4:5, 16:9, 21:9), export up to 4K at 24, 30 or 60 fps | Built |
-| Record from the camera | Built |
+| Record from the camera, record a voiceover | Built |
+| Reverse, background noise reduction, detach audio to its own track | Built |
 | Keyframes, animated text, masks | Not yet |
 | Multiple video tracks, picture-in-picture, blend modes | Not yet |
 | LUTs, node-based grading, scopes | Not yet |
-| Auto captions, beat sync, voiceover recording, noise reduction | Not yet |
-| Reverse, speed ramps, stabilisation, chroma key | Not yet |
+| Auto captions, beat sync | Not yet: captions need a speech model |
+| Speed ramps, chroma key | Not yet |
+| Stabilisation | Removed: it used enough memory on a test phone for Android to kill it |
 | Proxies, multicam, audio mixer, Fairlight-style audio tools | Not yet |
 | HDR, RAW and ProRes workflows | Not yet: limited by phone hardware |
 
@@ -103,8 +105,25 @@ To keep the app closed source, switch to an LGPL FFmpeg build and use
 H.264 and AAC may also carry patent licensing duties in some markets, so get legal
 advice before a commercial launch.
 
-**Release signing.** `android/app/build.gradle.kts` still signs release builds with the
-debug key. Add your own signing key before uploading to Google Play.
+**Release signing.** Release builds use the debug key until you add a signing key. Create
+one, then add `android/key.properties` (git ignores it, and you should never commit it):
+
+```properties
+storePassword=...
+keyPassword=...
+keyAlias=upload
+storeFile=C:/path/to/upload-keystore.jks
+```
+
+Google Play rejects apps signed with the debug key. Keep a backup of the keystore: if you
+lose it, you can no longer update the app under the same listing.
+
+**Privacy policy.** Play requires one at a public URL. `PRIVACY.md` is a starting draft
+written to match what the app does today; review it, and have it checked if you need to.
+
+**Crash reports.** Errors are logged on the device only, and users can share the log from
+the About screen. For reports from users' phones, add a crash reporting service, and
+update the privacy policy to cover it.
 
 **Fonts.** Fonts download from Google Fonts on first use, so a new font needs a network
 connection. Bundle them as assets if the app has to work fully offline.

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Directory, File;
+import 'dart:io' show Directory, File, FileSystemException;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -28,10 +28,113 @@ class MediaLibrary {
     final dir = Directory('${docs.path}/media');
     await dir.create(recursive: true);
     final name = file.name.isNotEmpty ? file.name : file.path.split('/').last;
-    final ext = name.contains('.') ? '.${name.split('.').last}' : '';
-    final target = '${dir.path}/${newId()}$ext';
-    await File(file.path).copy(target);
+    return store(File(file.path), name, dir, cache: await getTemporaryDirectory());
+  }
+
+  /// Copies [source] into [dir], or reuses an identical file already there.
+  /// Pickers hand back their own copy in the app cache, which is removed once
+  /// stored so that a video does not take up its space twice.
+  @visibleForTesting
+  static Future<String> store(File source, String name, Directory dir, {Directory? cache}) async {
+    var target = await _findIdentical(source, dir);
+    if (target == null) {
+      final ext = name.contains('.') ? '.${name.split('.').last}' : '';
+      target = '${dir.path}/${newId()}$ext';
+      await source.copy(target);
+    }
+    if (cache != null && _isInside(source.path, cache.path)) {
+      try {
+        await source.delete();
+      } on FileSystemException catch (e) {
+        debugPrint('Could not remove cached pick: $e');
+      }
+    }
     return target;
+  }
+
+  static bool _isInside(String path, String dir) =>
+      path.replaceAll(r'\', '/').startsWith('${dir.replaceAll(r'\', '/')}/');
+
+  static Future<String?> _findIdentical(File source, Directory dir) async {
+    final length = await source.length();
+    await for (final item in dir.list()) {
+      if (item is File && await item.length() == length && await _sameBytes(source, item)) {
+        return item.path;
+      }
+    }
+    return null;
+  }
+
+  /// Compares whole files, because reusing a file that merely looks the same
+  /// would silently put the wrong video in a project. Only same-sized files get
+  /// this far, so it rarely runs.
+  static Future<bool> _sameBytes(File a, File b) async {
+    const chunk = 1 << 20;
+    final ra = await a.open(), rb = await b.open();
+    try {
+      while (true) {
+        final x = await ra.read(chunk), y = await rb.read(chunk);
+        if (x.length != y.length) return false;
+        if (x.isEmpty) return true;
+        for (var i = 0; i < x.length; i++) {
+          if (x[i] != y[i]) return false;
+        }
+      }
+    } finally {
+      await ra.close();
+      await rb.close();
+    }
+  }
+
+  /// Frees storage from imports no project uses and from finished exports.
+  static Future<void> cleanUp() async {
+    if (kIsWeb) return;
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      await deleteUnusedMedia(Directory('${docs.path}/media'), Directory('${docs.path}/projects'));
+      final temp = await getTemporaryDirectory();
+      await for (final item in temp.list()) {
+        final name = item.path.replaceAll(r'\', '/').split('/').last;
+        if (item is Directory && name.startsWith('export-')) await item.delete(recursive: true);
+      }
+    } on FileSystemException catch (e) {
+      debugPrint('Storage clean-up skipped: $e');
+    }
+  }
+
+  /// Deletes files in [media] that no project mentions, and returns how many.
+  ///
+  /// This searches each project's raw text rather than parsing it, so a project
+  /// too damaged to open still keeps its files, and any project that can't be
+  /// read cancels the clean-up. Recent files are skipped because an editor may
+  /// have imported one that it hasn't saved yet.
+  @visibleForTesting
+  static Future<int> deleteUnusedMedia(
+    Directory media,
+    Directory projects, {
+    Duration grace = const Duration(minutes: 10),
+    DateTime? now,
+  }) async {
+    if (!await media.exists()) return 0;
+    final texts = <String>[];
+    if (await projects.exists()) {
+      await for (final item in projects.list()) {
+        if (item is File && item.path.endsWith('.json')) {
+          texts.add(await item.readAsString());
+        }
+      }
+    }
+    final cutoff = (now ?? DateTime.now()).subtract(grace);
+    var deleted = 0;
+    await for (final item in media.list()) {
+      if (item is! File) continue;
+      final fileName = item.path.replaceAll(r'\', '/').split('/').last;
+      final used = texts.any((t) => t.contains(fileName));
+      if (used || (await item.lastModified()).isAfter(cutoff)) continue;
+      await item.delete();
+      deleted++;
+    }
+    return deleted;
   }
 
   static Future<Directory> workDir(String name) async {

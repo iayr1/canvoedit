@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Text fonts are downloaded on first use. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Voiceover recording. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Saving exports to the gallery on Android 9 and older. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <application

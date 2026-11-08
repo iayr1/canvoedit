@@ -1,7 +1,9 @@
 import 'dart:io' show File;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/theme.dart';
 import '../../canvas/renderer.dart';
@@ -17,6 +19,13 @@ import 'video_project.dart';
   final scale = shortEdge / (width < height ? width : height);
   int even(double v) => (v / 2).round() * 2;
   return (width: even(width * scale), height: even(height * scale));
+}
+
+/// How many files this project needs that are no longer on the device.
+int missingMediaCount(VideoProject p) {
+  if (kIsWeb) return 0;
+  final paths = {...p.clips.map((c) => c.path), ...p.audio.map((a) => a.path)};
+  return paths.where((path) => !File(path).existsSync()).length;
 }
 
 class VideoExportSheet extends StatefulWidget {
@@ -53,8 +62,13 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
       _error = null;
       _cancelled = false;
     });
+    await WakelockPlus.enable();
     try {
       final p = widget.project;
+      final missing = missingMediaCount(p);
+      if (missing > 0) {
+        throw StateError('$missing media file${missing == 1 ? ' is' : 's are'} missing from this project. Remove or replace them, then try again.');
+      }
       final size = exportSize(p.width, p.height, _shortEdge);
       final dir = await MediaLibrary.workDir('export-${newId()}');
       await SceneRenderer.prepare(p.overlays);
@@ -107,9 +121,11 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
       if (mounted) {
         setState(() {
           _stage = _Stage.setup;
-          _error = '$e';
+          _error = e is StateError ? e.message : '$e';
         });
       }
+    } finally {
+      await WakelockPlus.disable();
     }
   }
 
@@ -129,14 +145,17 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: switch (_stage) {
-          _Stage.setup => _setup(),
-          _Stage.running => _running(),
-          _Stage.done => _done(),
-        },
+    return PopScope(
+      canPop: _stage != _Stage.running,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: switch (_stage) {
+            _Stage.setup => _setup(),
+            _Stage.running => _running(),
+            _Stage.done => _done(),
+          },
+        ),
       ),
     );
   }
@@ -171,6 +190,8 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
           ),
           const SizedBox(height: 8),
           Text('${size.width} × ${size.height}, H.264 MP4', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
+          if (_shortEdge == 2160)
+            const Text('4K takes much longer and needs plenty of free storage.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, fontSize: 12)),
           const SizedBox(height: 14),
           FilledButton(
             onPressed: ExportEngine.isSupported ? _start : null,

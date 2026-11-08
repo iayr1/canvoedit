@@ -97,7 +97,74 @@ final List<FilterPreset> filterPresets = [
   _f('Vapor', 'Night', {'tint': .42, 'liftB': .45, 'saturation': .2, 'fade': .12}),
   _f('Afterglow', 'Night', {'tint': .2, 'temperature': .3, 'contrast': .16, 'vignette': .3}),
   _f('Lift Shadows', 'Night', {'brightness': .18, 'contrast': -.1, 'saturation': .08}),
+
+  ..._seriesPresets(),
 ];
+
+/// Base looks for the filter series. Each one is offered as-is and in every
+/// treatment below, which is how the library reaches several hundred filters
+/// while each stays a real, distinct set of slider values.
+const _seriesBases = <(String, String, Map<String, double>)>[
+  ('Azure', 'Sky', {'temperature': -.22, 'saturation': .12}),
+  ('Cumulus', 'Sky', {'exposure': .1, 'temperature': -.1, 'contrast': -.06}),
+  ('Dusk', 'Sky', {'tint': .18, 'temperature': .1, 'exposure': -.1}),
+  ('Fern', 'Nature', {'tint': -.2, 'saturation': .2}),
+  ('Moss', 'Nature', {'tint': -.28, 'saturation': -.1, 'fade': .1}),
+  ('Autumn', 'Nature', {'temperature': .3, 'saturation': .2, 'tint': .06}),
+  ('Concrete', 'Urban', {'saturation': -.35, 'contrast': .18}),
+  ('Subway', 'Urban', {'liftB': .25, 'contrast': .16, 'saturation': -.12}),
+  ('Rooftop', 'Urban', {'temperature': .12, 'contrast': .2, 'vignette': .15}),
+  ('Ivory', 'Wedding', {'exposure': .16, 'saturation': -.14, 'temperature': .1}),
+  ('Blush', 'Wedding', {'tint': .2, 'exposure': .12, 'contrast': -.06}),
+  ('Vow', 'Wedding', {'fade': .16, 'temperature': .14, 'exposure': .06}),
+  ('Runway', 'Fashion', {'contrast': .26, 'saturation': -.2}),
+  ('Editorial', 'Fashion', {'contrast': .14, 'temperature': -.1, 'fade': .1}),
+  ('Couture', 'Fashion', {'contrast': .22, 'tint': .1, 'vignette': .14}),
+  ('Mint', 'Pastel', {'tint': -.16, 'exposure': .16, 'contrast': -.12}),
+  ('Lilac', 'Pastel', {'tint': .22, 'liftB': .2, 'exposure': .12, 'contrast': -.1}),
+  ('Butter', 'Pastel', {'temperature': .2, 'exposure': .22, 'contrast': -.12}),
+  ('Arcade', 'Retro', {'saturation': .3, 'liftB': .24, 'contrast': .14}),
+  ('Cassette', 'Retro', {'fade': .26, 'tint': .16, 'temperature': .1}),
+  ('Drive In', 'Retro', {'temperature': .26, 'liftR': .2, 'fade': .16}),
+  ('Ember', 'Moody', {'temperature': .26, 'exposure': -.2, 'contrast': .18}),
+  ('Storm', 'Moody', {'temperature': -.24, 'exposure': -.18, 'saturation': -.2}),
+  ('Velvet', 'Moody', {'tint': .22, 'exposure': -.16, 'contrast': .16}),
+  ('Cyanotype', 'Creative', {'saturation': -.8, 'liftB': .5, 'gainB': .25}),
+  ('Magenta Lab', 'Creative', {'saturation': -.6, 'liftR': .35, 'liftB': .35}),
+  ('Copper', 'Creative', {'saturation': -.7, 'temperature': .5, 'contrast': .1}),
+  ('Aurora', 'Creative', {'hue': 30, 'saturation': .2}),
+  ('Infrared', 'Creative', {'hue': -70, 'saturation': .15}),
+  ('Solar', 'Creative', {'hue': 18, 'temperature': .25, 'contrast': .12}),
+];
+
+const _seriesTreatments = <String, Map<String, double>>{
+  'Soft': {'contrast': -.12, 'fade': .1},
+  'Deep': {'contrast': .14, 'exposure': -.1},
+  'Warm': {'temperature': .18},
+  'Cool': {'temperature': -.18},
+  'Bright': {'exposure': .18},
+  'Dark': {'exposure': -.16, 'saturation': -.12, 'vignette': .22},
+  'Vivid': {'saturation': .24},
+  'Muted': {'saturation': -.26},
+  'Faded': {'fade': .28},
+  'Rose': {'tint': .18},
+};
+
+List<FilterPreset> _seriesPresets() {
+  final out = <FilterPreset>[];
+  for (final (name, category, values) in _seriesBases) {
+    out.add(_f(name, category, values));
+    _seriesTreatments.forEach((treatment, delta) {
+      final merged = Map<String, double>.of(values);
+      delta.forEach((key, v) {
+        final param = adjustParams.firstWhere((p) => p.key == key);
+        merged[key] = ((merged[key] ?? 0) + v).clamp(param.min, param.max);
+      });
+      out.add(_f('$name $treatment', category, merged));
+    });
+  }
+  return out;
+}
 
 final Map<String, FilterPreset> _byId = {for (final p in filterPresets) p.id: p};
 

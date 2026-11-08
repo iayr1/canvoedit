@@ -32,5 +32,9 @@ class Output {
     }
   }
 
-  static String _mime(String name) => name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+  static String _mime(String name) {
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.pdf')) return 'application/pdf';
+    return 'image/jpeg';
+  }
 }

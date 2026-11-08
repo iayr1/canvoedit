@@ -4,10 +4,15 @@ import 'layer.dart';
 /// Starter designs. All artwork is original and drawn in code, so templates need
 /// no licensed assets and stay fully editable.
 class DesignTemplate {
-  const DesignTemplate(this.name, this.category, this.build);
+  const DesignTemplate(this.name, this.category, this.build, {this.format = ''});
   final String name;
+
+  /// The topic it's filed under, such as Sale or Wedding.
   final String category;
   final CanvasDocument Function() build;
+
+  /// The canvas shape, such as Story or Post, used in search.
+  final String format;
 }
 
 CanvasLayer _text(
@@ -35,8 +40,8 @@ CanvasLayer _shape(ShapeKind kind, double x, double y, double width, int fill, {
       ..opacity = opacity
       ..rotation = rotation;
 
-final List<DesignTemplate> designTemplates = [
-  DesignTemplate('Flash Sale', 'Story', () => CanvasDocument(
+final List<DesignTemplate> featuredTemplates = [
+  DesignTemplate('Flash Sale', 'Sale', () => CanvasDocument(
     name: 'Flash Sale',
     pixelWidth: 1080,
     pixelHeight: 1920,
@@ -44,25 +49,25 @@ final List<DesignTemplate> designTemplates = [
     layers: [
       _shape(ShapeKind.circle, .85, .12, .7, 0x33FFFFFF),
       _shape(ShapeKind.circle, .1, .9, .8, 0x22FFFFFF),
-      _text('FLASH', .34, font: 'Anton', size: .28),
-      _text('SALE', .48, font: 'Anton', size: .28, color: 0xFFFFE066),
+      _text('FLASH', .3, font: 'Anton', size: .28),
+      _text('SALE', .49, font: 'Anton', size: .28, color: 0xFFFFE066),
       _text('Up to 50% off', .62, size: .07, bold: true),
       _text('Shop now', .78, size: .05, bold: true, color: 0xFF7C1D6F, bg: 0xFFFFFFFF),
     ],
   )),
-  DesignTemplate('Daily Quote', 'Post', () => CanvasDocument(
+  DesignTemplate('Daily Quote', 'Quote', () => CanvasDocument(
     name: 'Daily Quote',
     pixelWidth: 1080,
     pixelHeight: 1080,
     background: CanvasBackground(0xFFF7F1E3),
     layers: [
-      _text('“', .24, font: 'Playfair Display', size: .3, color: 0xFFC8553D),
+      _text('“', .2, font: 'Playfair Display', size: .3, color: 0xFFC8553D),
       _text('Make it simple,\nbut significant.', .5, font: 'Playfair Display', size: .085, color: 0xFF22223B),
       _shape(ShapeKind.rectangle, .5, .7, .12, 0xFFC8553D, aspect: .04),
       _text('your name', .77, size: .035, color: 0xFF4A4E69, spacing: .006),
     ],
   )),
-  DesignTemplate('Event Poster', 'Poster', () => CanvasDocument(
+  DesignTemplate('Event Poster', 'Event', () => CanvasDocument(
     name: 'Event Poster',
     pixelWidth: 2480,
     pixelHeight: 3508,
@@ -74,19 +79,19 @@ final List<DesignTemplate> designTemplates = [
       _text('SAT 14 NOV  /  7 PM  /  CITY HALL', .88, size: .032, bold: true, color: 0xFFFFE066),
     ],
   )),
-  DesignTemplate('Video Thumbnail', 'YouTube', () => CanvasDocument(
+  DesignTemplate('Video Thumbnail', 'Education', () => CanvasDocument(
     name: 'Video Thumbnail',
     pixelWidth: 1280,
     pixelHeight: 720,
     background: CanvasBackground(0xFF0F172A, color2: 0xFF1D4ED8, angle: 20),
     layers: [
       _shape(ShapeKind.star, .84, .3, .3, 0xFFFACC15, rotation: .2),
-      _text('5 EDITING', .38, x: .4, font: 'Anton', size: .13),
-      _text('TRICKS', .62, x: .36, font: 'Anton', size: .13, color: 0xFFFACC15),
+      _text('5 EDITING', .355, x: .4, font: 'Anton', size: .13),
+      _text('TRICKS', .645, x: .36, font: 'Anton', size: .13, color: 0xFFFACC15),
       _text('in 60 seconds', .84, x: .28, size: .04, bold: true, color: 0xFF0F172A, bg: 0xFFFFFFFF),
     ],
   )),
-  DesignTemplate('Birthday', 'Post', () => CanvasDocument(
+  DesignTemplate('Birthday', 'Birthday', () => CanvasDocument(
     name: 'Birthday',
     pixelWidth: 1080,
     pixelHeight: 1350,
@@ -99,7 +104,7 @@ final List<DesignTemplate> designTemplates = [
       CanvasLayer.sticker('\u{1F388}')..cx = .84..cy = .9..fontSize = .12,
     ],
   )),
-  DesignTemplate('Podcast Cover', 'Logo', () => CanvasDocument(
+  DesignTemplate('Podcast Cover', 'Podcast', () => CanvasDocument(
     name: 'Podcast Cover',
     pixelWidth: 1000,
     pixelHeight: 1000,
@@ -111,20 +116,20 @@ final List<DesignTemplate> designTemplates = [
       _text('weekly conversations', .84, size: .04, color: 0xFFF1FAEE),
     ],
   )),
-  DesignTemplate('Product Launch', 'Story', () => CanvasDocument(
+  DesignTemplate('Product Launch', 'Business', () => CanvasDocument(
     name: 'Product Launch',
     pixelWidth: 1080,
     pixelHeight: 1920,
     background: CanvasBackground(0xFFFFFFFF),
     layers: [
       _shape(ShapeKind.rounded, .5, .42, .84, 0xFF111827, aspect: 1.1),
-      _text('NEW', .17, font: 'Space Grotesk', size: .05, bold: true, color: 0xFF111827, spacing: .02),
+      _text('NEW', .1, font: 'Space Grotesk', size: .05, bold: true, color: 0xFF111827, spacing: .02),
       _text('Your product\nhere', .42, font: 'Space Grotesk', size: .1, bold: true),
       _text('Available now', .76, size: .06, color: 0xFF111827),
       _text('Learn more', .85, size: .045, bold: true, bg: 0xFFFF5C39),
     ],
   )),
-  DesignTemplate('Travel Story', 'Story', () => CanvasDocument(
+  DesignTemplate('Travel Story', 'Travel', () => CanvasDocument(
     name: 'Travel Story',
     pixelWidth: 1080,
     pixelHeight: 1920,
@@ -137,7 +142,7 @@ final List<DesignTemplate> designTemplates = [
       _text('MORE', .5, font: 'Oswald', size: .09, bold: true, spacing: .03),
     ],
   )),
-  DesignTemplate('Business Card', 'Print', () => CanvasDocument(
+  DesignTemplate('Business Card', 'Business', () => CanvasDocument(
     name: 'Business Card',
     pixelWidth: 1050,
     pixelHeight: 600,
@@ -149,7 +154,7 @@ final List<DesignTemplate> designTemplates = [
       _text('hello@example.com', .72, x: .32, size: .03, color: 0xFFFF9B85),
     ],
   )),
-  DesignTemplate('Minimal Announcement', 'Post', () => CanvasDocument(
+  DesignTemplate('Minimal Announcement', 'Announcement', () => CanvasDocument(
     name: 'Announcement',
     pixelWidth: 1080,
     pixelHeight: 1350,

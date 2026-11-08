@@ -1,16 +1,19 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../app/theme.dart';
 import '../../canvas/document.dart';
 import '../../canvas/layer.dart';
 import '../../canvas/renderer.dart';
+import '../../canvas/template_library.dart';
 import '../../canvas/templates.dart';
 import '../../core/media.dart';
+import '../../core/media_picker.dart';
 import '../../core/project_store.dart';
 import '../editor/editor_screen.dart';
+import 'template_browser.dart';
+import '../settings/about_screen.dart';
 import '../video/video_editor_screen.dart';
 import '../video/video_project.dart';
 
@@ -24,13 +27,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _picker = ImagePicker();
   late Future<List<ProjectEntry>> _projects = ProjectStore.instance.list();
 
   @override
   void initState() {
     super.initState();
     ProjectStore.instance.revision.addListener(_reload);
+    MediaLibrary.cleanUp();
   }
 
   @override
@@ -65,7 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _editPhoto() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery);
+    final file = await MediaPicker.image(
+      onError: (message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))),
+    );
     if (file == null) return;
     final path = await MediaLibrary.import(file);
     final image = await ImageBank.instance.load(path);
@@ -157,6 +162,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _duplicate(ProjectEntry entry) async {
+    final data = Map<String, dynamic>.of(entry.data)..['id'] = newId();
+    final name = '${entry.name} copy';
+    data['name'] = name;
+    await ProjectStore.instance.save(
+      ProjectEntry(id: data['id'] as String, name: name, type: entry.type, updatedAt: DateTime.now(), data: data, thumbnail: entry.thumbnail),
+    );
+  }
+
   Future<void> _confirmDelete(ProjectEntry entry) async {
     final yes = await showDialog<bool>(
       context: context,
@@ -169,7 +183,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (yes ?? false) await ProjectStore.instance.delete(entry.id);
+    if (yes ?? false) {
+      await ProjectStore.instance.delete(entry.id);
+      await MediaLibrary.cleanUp();
+    }
   }
 
   @override
@@ -180,8 +197,11 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                child: RichText(
+                padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RichText(
                   text: const TextSpan(
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -.5),
                     children: [
@@ -189,6 +209,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       TextSpan(text: ' Edit', style: TextStyle(color: AppColors.coral)),
                     ],
                   ),
+                ),
+                    ),
+                    IconButton(
+                      tooltip: 'About Canvo Edit',
+                      icon: const Icon(Icons.info_outline),
+                      onPressed: () => _open(const AboutScreen()),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -216,17 +244,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const _SectionTitle('Start from a template'),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 8, 0),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('Start from a template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                    TextButton(
+                      key: const ValueKey('all-templates'),
+                      onPressed: () => _open(const TemplateBrowser()),
+                      child: Text('See all ${allTemplates.length}'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 190,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: designTemplates.length,
+                  itemCount: featuredTemplates.length,
                   itemBuilder: (context, i) {
-                    final t = designTemplates[i];
-                    return _TemplateTile(template: t, onTap: () => _open(EditorScreen(document: t.build())));
+                    final t = featuredTemplates[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: SizedBox(
+                        width: 118,
+                        child: TemplateTile(template: t, onTap: () => _open(EditorScreen(document: t.build()))),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -253,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     childAspectRatio: .95,
                     children: [
                       for (final e in items)
-                        _ProjectTile(entry: e, onTap: () => _openEntry(e), onDelete: () => _confirmDelete(e)),
+                        _ProjectTile(entry: e, onTap: () => _openEntry(e), onDuplicate: () => _duplicate(e), onDelete: () => _confirmDelete(e)),
                     ],
                   ),
                 );
@@ -309,73 +357,11 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
-class _TemplateTile extends StatefulWidget {
-  const _TemplateTile({required this.template, required this.onTap});
-  final DesignTemplate template;
-  final VoidCallback onTap;
-
-  @override
-  State<_TemplateTile> createState() => _TemplateTileState();
-}
-
-class _TemplateTileState extends State<_TemplateTile> {
-  late final CanvasDocument _doc = widget.template.build();
-
-  @override
-  void initState() {
-    super.initState();
-    SceneRenderer.prepare(_doc.layers).then((_) {
-      if (mounted) setState(() {});
-    }).catchError((Object e) {
-      debugPrint('Template fonts unavailable: $e');
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        width: 118,
-        margin: const EdgeInsets.only(right: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: _doc.aspectRatio,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CustomPaint(painter: _DocPainter(_doc)),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(widget.template.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DocPainter extends CustomPainter {
-  _DocPainter(this.doc);
-  final CanvasDocument doc;
-
-  @override
-  void paint(Canvas canvas, Size size) => SceneRenderer.paintDocument(canvas, size, doc);
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.entry, required this.onTap, required this.onDelete});
+  const _ProjectTile({required this.entry, required this.onTap, required this.onDuplicate, required this.onDelete});
   final ProjectEntry entry;
   final VoidCallback onTap;
+  final VoidCallback onDuplicate;
   final VoidCallback onDelete;
 
   @override
@@ -399,6 +385,7 @@ class _ProjectTile extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                  IconButton(tooltip: 'Duplicate', icon: const Icon(Icons.copy, size: 16), onPressed: onDuplicate),
                   IconButton(tooltip: 'Delete', icon: const Icon(Icons.delete_outline, size: 18), onPressed: onDelete),
                 ],
               ),

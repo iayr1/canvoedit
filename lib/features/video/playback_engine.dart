@@ -20,15 +20,28 @@ class PlaybackEngine extends ChangeNotifier {
   final Set<String> _initializing = {};
   final Map<String, VideoPlayerController> _audioPlayers = {};
   final Set<String> _seeking = {};
+  final Map<String, int> _pendingSeeks = {};
 
   static const _tick = Duration(milliseconds: 33);
-  static const _driftLimitMs = 280;
+  static const _followIntervalMs = 500;
+  static const _followToleranceMs = 120;
+  static const _seekDriftMs = 1500;
 
+  /// Total seeks sent to players, for checking playback does not overuse them.
+  @visibleForTesting
+  int seekCount = 0;
+
+  final Stopwatch _followCheck = Stopwatch()..start();
+  bool _following = false;
+  int? _lastFollowPosition;
   Timer? _timer;
   final Stopwatch _clock = Stopwatch();
   int _anchorMs = 0;
   int positionMs = 0;
   bool playing = false;
+
+  /// Silences playback, so a voiceover mic doesn't pick up the speaker.
+  bool muted = false;
   bool _disposed = false;
 
   VideoProject get project => _project();
@@ -97,6 +110,7 @@ class PlaybackEngine extends ChangeNotifier {
     }
     positionMs = next;
     _sync();
+    _followPlayer();
     notifyListeners();
   }
 
@@ -148,19 +162,76 @@ class PlaybackEngine extends ChangeNotifier {
     _ensure(clip);
     final player = playerFor(clip);
     if (player == null) return;
-    if (player.value.volume != clip.volume) player.setVolume(clip.volume.clamp(0.0, 1.0));
+    final volume = muted ? 0.0 : clip.volume.clamp(0.0, 1.0);
+    if (player.value.volume != volume) player.setVolume(volume);
     if (player.value.playbackSpeed != clip.speed) player.setPlaybackSpeed(clip.speed);
     _align(clip.id, player, sourceMs, forceSeek);
     if (playing && !player.value.isPlaying) player.play();
     if (!playing && player.value.isPlaying) player.pause();
   }
 
+  /// Positions a player that is not already running. A running player is left
+  /// alone: seeking restarts its decoder, so repeated corrections would stop it
+  /// from ever showing a frame. The clock follows it instead; see [_followPlayer].
   void _align(String key, VideoPlayerController player, int targetMs, bool forceSeek) {
-    final drift = (player.value.position.inMilliseconds - targetMs).abs();
-    final needed = forceSeek ? drift > 30 : (!playing && drift > 30) || drift > _driftLimitMs;
-    if (!needed || _seeking.contains(key)) return;
+    if (!forceSeek && player.value.isPlaying) return;
+    if ((player.value.position.inMilliseconds - targetMs).abs() <= 30) return;
+    _seek(key, player, targetMs);
+  }
+
+  /// Only one seek runs per player. The newest request waits for it, so fast
+  /// scrubbing still ends on the frame the user stopped at.
+  void _seek(String key, VideoPlayerController player, int targetMs) {
+    if (_seeking.contains(key)) {
+      _pendingSeeks[key] = targetMs;
+      return;
+    }
     _seeking.add(key);
-    player.seekTo(Duration(milliseconds: targetMs)).whenComplete(() => _seeking.remove(key));
+    seekCount++;
+    player
+        .seekTo(Duration(milliseconds: targetMs))
+        .catchError((Object e) => debugPrint('Seek failed: $e'))
+        .whenComplete(() {
+          _seeking.remove(key);
+          final next = _pendingSeeks.remove(key);
+          if (next != null && !_disposed) _seek(key, player, next);
+        });
+  }
+
+  /// Keeps the clock on the on-screen player, so the timeline waits while video
+  /// buffers rather than running ahead of the picture. A player stuck far from
+  /// the clock is the one case that still gets a seek.
+  Future<void> _followPlayer() async {
+    if (_following || _followCheck.elapsedMilliseconds < _followIntervalMs) return;
+    final f = frame;
+    if (f == null || f.clip.kind != ClipKind.video) return;
+    final player = playerFor(f.clip);
+    if (player == null || !player.value.isPlaying || player.value.isCompleted) return;
+    _following = true;
+    _followCheck
+      ..reset()
+      ..start();
+    try {
+      final position = (await player.position)?.inMilliseconds;
+      if (position == null || !playing || _disposed || frame?.clip != f.clip) return;
+      final stalled = position == _lastFollowPosition && !player.value.isBuffering;
+      _lastFollowPosition = position;
+      final start = project.startOf(project.clips.indexOf(f.clip));
+      final expected = start + ((position - f.clip.inMs) / f.clip.speed).round();
+      final drift = (expected - positionMs).abs();
+      if (drift <= _followToleranceMs) return;
+      if (drift >= _seekDriftMs) {
+        _seek(f.clip.id, player, f.clipTimeMs);
+      } else if (!stalled) {
+        positionMs = expected;
+        _anchorMs = expected;
+        _clock
+          ..reset()
+          ..start();
+      }
+    } finally {
+      _following = false;
+    }
   }
 
   void _syncAudio(bool forceSeek) {
@@ -181,7 +252,8 @@ class PlaybackEngine extends ChangeNotifier {
       }
       if (!player.value.isInitialized) continue;
       final active = positionMs >= track.startMs && positionMs < track.startMs + track.durationMs;
-      if (player.value.volume != track.volume) player.setVolume(track.volume.clamp(0.0, 1.0));
+      final volume = muted ? 0.0 : track.volume.clamp(0.0, 1.0);
+      if (player.value.volume != volume) player.setVolume(volume);
       if (!active || !playing) {
         if (player.value.isPlaying) player.pause();
         continue;

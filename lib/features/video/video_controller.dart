@@ -172,6 +172,33 @@ class VideoController extends ChangeNotifier {
     touch();
   }
 
+  /// Points a clip at a processed copy of its video, such as a reversed one.
+  /// It gets a new identity so playback opens the new file. The old file stays
+  /// until clean-up finds no project using it, so undo keeps working.
+  void replaceSource(VideoClip clip, {required String path, required int sourceMs, required bool hasAudio, bool resetTrim = true}) {
+    final index = project.clips.indexOf(clip);
+    if (index < 0) return;
+    final json = clip.copy(newIdentity: true).toJson()
+      ..['path'] = path
+      ..['sourceMs'] = sourceMs
+      ..['hasAudio'] = hasAudio;
+    if (resetTrim) {
+      json['inMs'] = 0;
+      json['outMs'] = sourceMs;
+    }
+    final next = VideoClip.fromJson(json);
+    project.clips[index] = next;
+    selectClip(next.id);
+    commit();
+  }
+
+  /// Moves a clip's sound to its own track, leaving the clip silent.
+  void detachAudio(VideoClip clip, AudioTrack track) {
+    clip.volume = 0;
+    project.audio.add(track);
+    commit();
+  }
+
   void setFormat(int width, int height) {
     project
       ..width = width
