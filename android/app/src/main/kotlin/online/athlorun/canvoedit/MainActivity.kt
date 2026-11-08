@@ -1,4 +1,4 @@
-package club.edge.canvo_edit
+package online.athlorun.canvoedit
 
 import io.flutter.embedding.android.FlutterActivity
 

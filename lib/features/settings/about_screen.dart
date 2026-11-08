@@ -5,6 +5,7 @@ import '../../core/crash_log.dart';
 import '../../core/output.dart';
 
 const appVersion = '1.0.0';
+const sourceCodeUrl = 'https://github.com/iayr1/canvoedit';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -32,6 +33,15 @@ class AboutScreen extends StatelessWidget {
             subtitle: Text(
               'Your photos, videos and projects stay on this device and are never uploaded. '
               'The app only goes online to download text fonts from Google Fonts.',
+              style: TextStyle(color: AppColors.muted),
+            ),
+          ),
+          const ListTile(
+            leading: Icon(Icons.code),
+            title: Text('Free and open source'),
+            subtitle: SelectableText(
+              'Canvo Edit is licensed under the GNU GPL version 3. You can get its full source code, '
+              'and use, change and share it under that license, at $sourceCodeUrl',
               style: TextStyle(color: AppColors.muted),
             ),
           ),

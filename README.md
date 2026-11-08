@@ -96,14 +96,20 @@ Marked against the products Canvo Edit is inspired by. "Partial" says what's mis
 - `lib/features/video/playback_engine.dart`: plays the timeline from a master clock
   using one native player per clip on screen.
 
+## License
+
+Canvo Edit is free software under the GNU General Public License version 3: see
+[LICENSE](LICENSE). It bundles the GPL build of FFmpeg, including x264, through
+`ffmpeg_kit_flutter_new`, which is why the whole app is GPL.
+
+Anyone distributing the app, including through Google Play, must make the matching
+source available under the same license. Keep this repository public and tag each
+release you publish, so the source for every version stays easy to find.
+
 ## Before you publish
 
-**FFmpeg licensing.** `ffmpeg_kit_flutter_new` is the full GPL build because it includes
-x264. Distributing an app that uses it means releasing your app's source under GPL v3.
-To keep the app closed source, switch to an LGPL FFmpeg build and use
-`VideoEncoder.hardwareAndroid` in `ffmpeg_graph.dart`, plus an equivalent for iOS.
-H.264 and AAC may also carry patent licensing duties in some markets, so get legal
-advice before a commercial launch.
+**Codec patents.** H.264 and AAC may carry patent licensing duties in some markets, which
+the GPL doesn't cover. Get advice before a commercial launch.
 
 **Release signing.** Release builds use the debug key until you add a signing key. Create
 one, then add `android/key.properties` (git ignores it, and you should never commit it):

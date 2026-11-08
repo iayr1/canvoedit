@@ -14,7 +14,7 @@ plugins {
 }
 
 android {
-    namespace = "club.edge.canvo_edit"
+    namespace = "online.athlorun.canvoedit"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "club.edge.canvo_edit"
+        applicationId = "online.athlorun.canvoedit"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // 26 is the first version that shows the adaptive launcher icon.

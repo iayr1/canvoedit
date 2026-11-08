@@ -1,10 +1,7 @@
 # Canvo Edit privacy policy
 
-> **Draft.** This was written to match what the app does as of version 1.0.0. Review it
-> before publishing, add your contact details, and keep it current whenever the app
-> starts collecting or sending anything new.
-
-_Last updated: [date]_
+_Last updated: 8 November 2026. Applies to Canvo Edit version 1.0.0 and later, until
+this policy is updated._
 
 ## Summary
 
@@ -46,4 +43,4 @@ information.
 
 ## Contact
 
-[Your name or company, and an email address for privacy questions]
+Questions about this policy or your privacy: myodimensions@gmail.com
