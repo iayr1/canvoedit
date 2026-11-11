@@ -6,9 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import 'video_project.dart';
 
-VideoPlayerController createPlayer(String path) => kIsWeb
-    ? VideoPlayerController.networkUrl(Uri.parse(path))
-    : VideoPlayerController.file(File(path));
+VideoPlayerController createPlayer(String path) => kIsWeb ? VideoPlayerController.networkUrl(Uri.parse(path)) : VideoPlayerController.file(File(path));
 
 /// Plays the timeline by driving one native player per on-screen clip from a
 /// master clock, correcting any player that drifts away from it.
@@ -143,19 +141,22 @@ class PlaybackEngine extends ChangeNotifier {
     if (_players.containsKey(clip.id) || _initializing.contains(clip.id)) return;
     _initializing.add(clip.id);
     final player = createPlayer(clip.path);
-    player.initialize().then((_) {
-      _initializing.remove(clip.id);
-      if (_disposed) {
-        player.dispose();
-        return;
-      }
-      _players[clip.id] = player;
-      _sync(forceSeek: true);
-      notifyListeners();
-    }).catchError((Object e) {
-      _initializing.remove(clip.id);
-      debugPrint('Could not open clip ${clip.path}: $e');
-    });
+    player
+        .initialize()
+        .then((_) {
+          _initializing.remove(clip.id);
+          if (_disposed) {
+            player.dispose();
+            return;
+          }
+          _players[clip.id] = player;
+          _sync(forceSeek: true);
+          notifyListeners();
+        })
+        .catchError((Object e) {
+          _initializing.remove(clip.id);
+          debugPrint('Could not open clip ${clip.path}: $e');
+        });
   }
 
   void _driveClip(VideoClip clip, int sourceMs, bool forceSeek) {
@@ -188,14 +189,11 @@ class PlaybackEngine extends ChangeNotifier {
     }
     _seeking.add(key);
     seekCount++;
-    player
-        .seekTo(Duration(milliseconds: targetMs))
-        .catchError((Object e) => debugPrint('Seek failed: $e'))
-        .whenComplete(() {
-          _seeking.remove(key);
-          final next = _pendingSeeks.remove(key);
-          if (next != null && !_disposed) _seek(key, player, next);
-        });
+    player.seekTo(Duration(milliseconds: targetMs)).catchError((Object e) => debugPrint('Seek failed: $e')).whenComplete(() {
+      _seeking.remove(key);
+      final next = _pendingSeeks.remove(key);
+      if (next != null && !_disposed) _seek(key, player, next);
+    });
   }
 
   /// Keeps the clock on the on-screen player, so the timeline waits while video

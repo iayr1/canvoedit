@@ -12,11 +12,7 @@ class ExportEngine {
   static const bool isSupported = true;
 
   /// Returns null on success, or an error message. Cancelling is not an error.
-  static Future<String?> run(
-    List<String> args, {
-    required int durationMs,
-    required void Function(double progress) onProgress,
-  }) async {
+  static Future<String?> run(List<String> args, {required int durationMs, required void Function(double progress) onProgress}) async {
     final done = Completer<String?>();
     final logTail = <String>[];
     await FFmpegKit.executeWithArgumentsAsync(

@@ -31,6 +31,7 @@ class CanvasView extends StatefulWidget {
     this.draw,
     this.onStroke,
     this.timeMs,
+    this.onDropPhoto,
   });
 
   final double aspectRatio;
@@ -46,6 +47,10 @@ class CanvasView extends StatefulWidget {
 
   /// Current time in a video project. Layers outside it are hidden.
   final int? timeMs;
+
+  /// Called when a photo path is dragged onto the canvas, with the frame it
+  /// landed on, or null when it landed outside every frame.
+  final void Function(String path, CanvasLayer? frame)? onDropPhoto;
 
   @override
   State<CanvasView> createState() => _CanvasViewState();
@@ -66,6 +71,19 @@ class _CanvasViewState extends State<CanvasView> {
   bool _snapX = false;
   bool _snapY = false;
   Size _canvas = Size.zero;
+  final _box = GlobalKey();
+  CanvasLayer? _dropFrame;
+
+  /// The frame under a global point, for drag and drop.
+  CanvasLayer? _frameAt(Offset global) {
+    final box = _box.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    final p = box.globalToLocal(global);
+    for (final l in widget.layers.reversed) {
+      if (l.isFrame && l.isVisibleAt(widget.timeMs) && SceneRenderer.hitTest(l, p, _canvas, slop: 0)) return l;
+    }
+    return null;
+  }
 
   CanvasLayer? get _selected {
     for (final l in widget.layers) {
@@ -219,22 +237,36 @@ class _CanvasViewState extends State<CanvasView> {
         _canvas = Size(w, h);
         return Center(
           child: SizedBox(
+            key: _box,
             width: w,
             height: h,
-            child: GestureDetector(
-              key: const ValueKey('canvas-gestures'),
-              behavior: HitTestBehavior.opaque,
-              onTapUp: _onTapUp,
-              onDoubleTapDown: _onDoubleTapDown,
-              onDoubleTap: () {},
-              onScaleStart: _onScaleStart,
-              onScaleUpdate: _onScaleUpdate,
-              onScaleEnd: _onScaleEnd,
-              child: ClipRect(
-                child: CustomPaint(
-                  size: _canvas,
-                  painter: _ScenePainter(widget.layers, widget.background, widget.timeMs, _stroke, widget.draw),
-                  foregroundPainter: _SelectionPainter(_selected, widget.timeMs, _snapX, _snapY),
+            child: DragTarget<String>(
+              onWillAcceptWithDetails: (_) => widget.onDropPhoto != null,
+              onMove: (d) {
+                final f = _frameAt(d.offset);
+                if (f?.id != _dropFrame?.id) setState(() => _dropFrame = f);
+              },
+              onLeave: (_) => setState(() => _dropFrame = null),
+              onAcceptWithDetails: (d) {
+                final f = _frameAt(d.offset);
+                setState(() => _dropFrame = null);
+                widget.onDropPhoto?.call(d.data, f);
+              },
+              builder: (context, _, _) => GestureDetector(
+                key: const ValueKey('canvas-gestures'),
+                behavior: HitTestBehavior.opaque,
+                onTapUp: _onTapUp,
+                onDoubleTapDown: _onDoubleTapDown,
+                onDoubleTap: () {},
+                onScaleStart: _onScaleStart,
+                onScaleUpdate: _onScaleUpdate,
+                onScaleEnd: _onScaleEnd,
+                child: ClipRect(
+                  child: CustomPaint(
+                    size: _canvas,
+                    painter: _ScenePainter(widget.layers, widget.background, widget.timeMs, _stroke, widget.draw),
+                    foregroundPainter: _SelectionPainter(_selected, widget.timeMs, _snapX, _snapY, _dropFrame),
+                  ),
                 ),
               ),
             ),
@@ -268,8 +300,11 @@ class _ScenePainter extends CustomPainter {
 }
 
 class _SelectionPainter extends CustomPainter {
-  _SelectionPainter(this.layer, this.timeMs, this.snapX, this.snapY);
+  _SelectionPainter(this.layer, this.timeMs, this.snapX, this.snapY, this.dropFrame);
   final CanvasLayer? layer;
+
+  /// The frame a dragged photo would land in.
+  final CanvasLayer? dropFrame;
   final int? timeMs;
   final bool snapX;
   final bool snapY;
@@ -283,6 +318,24 @@ class _SelectionPainter extends CustomPainter {
       ..strokeWidth = 1;
     if (snapX) canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), guide);
     if (snapY) canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), guide);
+
+    final drop = dropFrame;
+    if (drop != null) {
+      final s = SceneRenderer.layerSize(drop, size);
+      canvas.save();
+      canvas.translate(drop.cx * size.width, drop.cy * size.height);
+      canvas.rotate(drop.rotation);
+      final r = Rect.fromCenter(center: Offset.zero, width: s.width, height: s.height);
+      canvas.drawRect(r, Paint()..color = const Color(0x40FF3D8B));
+      canvas.drawRect(
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = const Color(0xFFFF3D8B)
+          ..strokeWidth = 3,
+      );
+      canvas.restore();
+    }
 
     final l = layer;
     if (l == null || l.kind == LayerKind.stroke || l.isBase || !l.isVisibleAt(timeMs)) return;

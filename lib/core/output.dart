@@ -20,11 +20,12 @@ class Output {
   }
 
   static Future<void> shareBytes(Uint8List bytes, String fileName) => SharePlus.instance.share(
-    ShareParams(files: [XFile.fromData(bytes, name: fileName, mimeType: _mime(fileName))]),
+    ShareParams(
+      files: [XFile.fromData(bytes, name: fileName, mimeType: _mime(fileName))],
+    ),
   );
 
-  static Future<void> shareFile(String path) =>
-      SharePlus.instance.share(ShareParams(files: [XFile(path)]));
+  static Future<void> shareFile(String path) => SharePlus.instance.share(ShareParams(files: [XFile(path)]));
 
   static Future<void> _ensureAccess() async {
     if (!await Gal.hasAccess(toAlbum: true)) {

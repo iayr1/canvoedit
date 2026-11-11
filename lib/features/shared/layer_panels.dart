@@ -6,9 +6,54 @@ import '../../canvas/renderer.dart';
 import 'grade_panels.dart';
 
 const stickerEmoji = [
-  '😀', '😂', '🥰', '😎', '🤩', '🥳', '😭', '🤯', '🔥', '✨', '💯', '❤️', '💜', '⭐', '🌈', '☀️',
-  '🌙', '⚡', '🎉', '🎂', '🎈', '🎁', '🎵', '🎧', '📷', '🎬', '✈️', '🌍', '🏖️', '🌸', '🌴', '🍕',
-  '☕', '🍦', '👑', '💎', '👍', '👏', '🙌', '💪', '➡️', '⬇️', '✅', '❌', '💬', '📍', '🛒', '💡',
+  '😀',
+  '😂',
+  '🥰',
+  '😎',
+  '🤩',
+  '🥳',
+  '😭',
+  '🤯',
+  '🔥',
+  '✨',
+  '💯',
+  '❤️',
+  '💜',
+  '⭐',
+  '🌈',
+  '☀️',
+  '🌙',
+  '⚡',
+  '🎉',
+  '🎂',
+  '🎈',
+  '🎁',
+  '🎵',
+  '🎧',
+  '📷',
+  '🎬',
+  '✈️',
+  '🌍',
+  '🏖️',
+  '🌸',
+  '🌴',
+  '🍕',
+  '☕',
+  '🍦',
+  '👑',
+  '💎',
+  '👍',
+  '👏',
+  '🙌',
+  '💪',
+  '➡️',
+  '⬇️',
+  '✅',
+  '❌',
+  '💬',
+  '📍',
+  '🛒',
+  '💡',
 ];
 
 class StickerGrid extends StatelessWidget {
@@ -110,8 +155,7 @@ class TextStylePanel extends StatelessWidget {
 }
 
 Future<String?> showTextDialog(BuildContext context, String initial) {
-  final field = TextEditingController(text: initial)
-    ..selection = TextSelection(baseOffset: 0, extentOffset: initial.length);
+  final field = TextEditingController(text: initial)..selection = TextSelection(baseOffset: 0, extentOffset: initial.length);
   return showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(

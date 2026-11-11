@@ -29,8 +29,7 @@ ColorMatrix multiplyMatrix(ColorMatrix a, ColorMatrix b) {
   return out;
 }
 
-ColorMatrix lerpMatrix(ColorMatrix a, ColorMatrix b, double t) =>
-    List<double>.generate(20, (i) => a[i] + (b[i] - a[i]) * t);
+ColorMatrix lerpMatrix(ColorMatrix a, ColorMatrix b, double t) => List<double>.generate(20, (i) => a[i] + (b[i] - a[i]) * t);
 
 ColorMatrix _scale(double r, double g, double b) => [
   r, 0, 0, 0, 0, //
@@ -131,35 +130,28 @@ ColorMatrix matrixFromValues(Map<String, double> v) {
   m = multiplyMatrix(_scale(exposure, exposure, exposure), m);
 
   final gain = 0.5;
-  m = multiplyMatrix(
-    _scale(1 + p('gainR') * gain, 1 + p('gainG') * gain, 1 + p('gainB') * gain),
-    m,
-  );
+  final gainY = 1 + p('gainY') * gain;
+  m = multiplyMatrix(_scale((1 + p('gainR') * gain) * gainY, (1 + p('gainG') * gain) * gainY, (1 + p('gainB') * gain) * gainY), m);
   const lift = 48.0;
-  m = multiplyMatrix(
-    _offset(p('liftR') * lift, p('liftG') * lift, p('liftB') * lift),
-    m,
-  );
+  // Lift raises the darks more than the lights: out = in * (1 - l) + l.
+  final liftY = p('liftY') * lift;
+  final keep = 1 - liftY / 255;
+  m = multiplyMatrix(multiplyMatrix(_offset(liftY, liftY, liftY), _scale(keep, keep, keep)), m);
+  m = multiplyMatrix(_offset(p('liftR') * lift, p('liftG') * lift, p('liftB') * lift), m);
+  // Offset moves every tone by the same amount, like a grading suite's offset wheel.
+  const shift = 40.0;
+  final offY = p('offY') * shift;
+  m = multiplyMatrix(_offset(p('offR') * shift + offY, p('offG') * shift + offY, p('offB') * shift + offY), m);
 
   final t = p('temperature'), tint = p('tint');
-  m = multiplyMatrix(
-    _scale(
-      (1 + 0.2 * t) * (1 + 0.075 * tint),
-      1 - 0.15 * tint,
-      (1 - 0.2 * t) * (1 + 0.075 * tint),
-    ),
-    m,
-  );
+  m = multiplyMatrix(_scale((1 + 0.2 * t) * (1 + 0.075 * tint), 1 - 0.15 * tint, (1 - 0.2 * t) * (1 + 0.075 * tint)), m);
 
   final b = p('brightness') * 64;
   m = multiplyMatrix(_offset(b, b, b), m);
 
   final k = 1 + p('contrast');
   final kOffset = 127.5 * (1 - k);
-  m = multiplyMatrix(
-    multiplyMatrix(_offset(kOffset, kOffset, kOffset), _scale(k, k, k)),
-    m,
-  );
+  m = multiplyMatrix(multiplyMatrix(_offset(kOffset, kOffset, kOffset), _scale(k, k, k)), m);
 
   m = multiplyMatrix(_saturation(1 + p('saturation')), m);
   if (p('hue') != 0) m = multiplyMatrix(_hue(p('hue')), m);
@@ -179,17 +171,14 @@ ColorMatrix matrixFromValues(Map<String, double> v) {
 /// The look of one image or clip: a filter preset at some strength, plus manual
 /// adjustments applied on top.
 class Grade {
-  Grade({this.filterId = 'original', this.strength = 1, Map<String, double>? values})
-    : values = values ?? {};
+  Grade({this.filterId = 'original', this.strength = 1, Map<String, double>? values}) : values = values ?? {};
 
   factory Grade.fromJson(Map<String, dynamic>? j) {
     if (j == null) return Grade();
     return Grade(
       filterId: j['filterId'] as String? ?? 'original',
       strength: (j['strength'] as num?)?.toDouble() ?? 1,
-      values: (j['values'] as Map?)?.map(
-        (k, v) => MapEntry(k as String, (v as num).toDouble()),
-      ),
+      values: (j['values'] as Map?)?.map((k, v) => MapEntry(k as String, (v as num).toDouble())),
     );
   }
 
@@ -197,11 +186,7 @@ class Grade {
   double strength;
   final Map<String, double> values;
 
-  Map<String, dynamic> toJson() => {
-    'filterId': filterId,
-    'strength': strength,
-    'values': values,
-  };
+  Map<String, dynamic> toJson() => {'filterId': filterId, 'strength': strength, 'values': values};
 
   Grade clone() => Grade(filterId: filterId, strength: strength, values: Map.of(values));
 
@@ -218,6 +203,5 @@ class Grade {
     return (fromPreset + (values['vignette'] ?? 0)).clamp(0.0, 1.0);
   }
 
-  bool get isNeutral =>
-      filterId == 'original' && values.values.every((v) => v == 0);
+  bool get isNeutral => filterId == 'original' && values.values.every((v) => v == 0);
 }

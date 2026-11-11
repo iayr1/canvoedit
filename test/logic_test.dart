@@ -10,8 +10,7 @@ import 'package:canvo_edit/features/video/video_export_sheet.dart';
 import 'package:canvo_edit/features/video/video_project.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-VideoClip _video(int ms, {bool audio = true, String path = '/in/a.mp4'}) =>
-    VideoClip(path: path, kind: ClipKind.video, sourceMs: ms, hasAudio: audio);
+VideoClip _video(int ms, {bool audio = true, String path = '/in/a.mp4'}) => VideoClip(path: path, kind: ClipKind.video, sourceMs: ms, hasAudio: audio);
 
 /// Applies a colour matrix to an RGB colour on a 0-255 scale.
 List<double> _apply(ColorMatrix m, double r, double g, double b) => [
@@ -152,7 +151,14 @@ void main() {
 
   group('timeline', () {
     test('duration subtracts transition overlaps', () {
-      final p = VideoProject(clips: [_video(4000)..transition = TransitionType.crossfade..transitionMs = 1000, _video(3000)]);
+      final p = VideoProject(
+        clips: [
+          _video(4000)
+            ..transition = TransitionType.crossfade
+            ..transitionMs = 1000,
+          _video(3000),
+        ],
+      );
       expect(p.durationMs, 6000);
       expect(p.startOf(1), 3000);
     });
@@ -163,12 +169,21 @@ void main() {
     });
 
     test('transitions cannot use more than half of a neighbouring clip', () {
-      final p = VideoProject(clips: [_video(4000)..transition = TransitionType.crossfade..transitionMs = 2000, _video(1000)]);
+      final p = VideoProject(
+        clips: [
+          _video(4000)
+            ..transition = TransitionType.crossfade
+            ..transitionMs = 2000,
+          _video(1000),
+        ],
+      );
       expect(p.transitionMsAfter(0), 500);
     });
 
     test('frameAt reports both clips and progress during a transition', () {
-      final a = _video(4000)..transition = TransitionType.crossfade..transitionMs = 1000;
+      final a = _video(4000)
+        ..transition = TransitionType.crossfade
+        ..transitionMs = 1000;
       final b = _video(3000);
       final p = VideoProject(clips: [a, b]);
 
@@ -210,7 +225,11 @@ void main() {
       final p = VideoProject(
         clips: [_video(1000)..grade.filterId = 'pop'],
         audio: [AudioTrack(path: 'm', name: 'song', sourceMs: 9000)],
-        overlays: [CanvasLayer.text('x')..startMs = 100..endMs = 200],
+        overlays: [
+          CanvasLayer.text('x')
+            ..startMs = 100
+            ..endMs = 200,
+        ],
       );
       expect(VideoProject.fromJson(p.toJson()).toJson(), p.toJson());
     });
@@ -280,15 +299,18 @@ void main() {
     String graphOf(List<String> args) => args[args.indexOf('-filter_complex') + 1];
 
     test('refuses an empty project', () {
-      expect(
-        () => buildExportArgs(project: VideoProject(), settings: settings, outputPath: 'o.mp4'),
-        throwsArgumentError,
-      );
+      expect(() => buildExportArgs(project: VideoProject(), settings: settings, outputPath: 'o.mp4'), throwsArgumentError);
     });
 
     test('a single clip seeks, scales to the frame and maps its output', () {
       final args = buildExportArgs(
-        project: VideoProject(clips: [_video(5000)..inMs = 1000..outMs = 3000]),
+        project: VideoProject(
+          clips: [
+            _video(5000)
+              ..inMs = 1000
+              ..outMs = 3000,
+          ],
+        ),
         settings: settings,
         outputPath: 'o.mp4',
       );
@@ -302,18 +324,22 @@ void main() {
     });
 
     test('a clip with no audio stream gets silence and never references [n:a]', () {
-      final g = graphOf(buildExportArgs(
-        project: VideoProject(clips: [_video(1000, audio: false)]),
-        settings: settings,
-        outputPath: 'o.mp4',
-      ));
+      final g = graphOf(
+        buildExportArgs(
+          project: VideoProject(clips: [_video(1000, audio: false)]),
+          settings: settings,
+          outputPath: 'o.mp4',
+        ),
+      );
       expect(g, contains('anullsrc'));
       expect(g, isNot(contains('[0:a]')));
     });
 
     test('a photo clip loops for its length', () {
       final args = buildExportArgs(
-        project: VideoProject(clips: [VideoClip(path: 'p.jpg', kind: ClipKind.image, sourceMs: 600000, outMs: 3000)]),
+        project: VideoProject(
+          clips: [VideoClip(path: 'p.jpg', kind: ClipKind.image, sourceMs: 600000, outMs: 3000)],
+        ),
         settings: settings,
         outputPath: 'o.mp4',
       );
@@ -321,35 +347,47 @@ void main() {
     });
 
     test('hard cuts use concat and transitions use xfade at the right offset', () {
-      final g = graphOf(buildExportArgs(
-        project: VideoProject(clips: [
-          _video(4000),
-          _video(4000)..transition = TransitionType.wipeLeft..transitionMs = 1000,
-          _video(4000),
-        ]),
-        settings: settings,
-        outputPath: 'o.mp4',
-      ));
+      final g = graphOf(
+        buildExportArgs(
+          project: VideoProject(
+            clips: [
+              _video(4000),
+              _video(4000)
+                ..transition = TransitionType.wipeLeft
+                ..transitionMs = 1000,
+              _video(4000),
+            ],
+          ),
+          settings: settings,
+          outputPath: 'o.mp4',
+        ),
+      );
       expect(g, contains('[v0][v1]concat=n=2:v=1:a=0'));
       expect(g, contains('[vj1][v2]xfade=transition=wipeleft:duration=1.000:offset=7.000'));
       expect(g, contains('acrossfade=d=1.000'));
     });
 
     test('the output length agrees with the project timeline', () {
-      final p = VideoProject(clips: [
-        _video(4000)..transition = TransitionType.crossfade..transitionMs = 1000,
-        _video(4000),
-      ]);
+      final p = VideoProject(
+        clips: [
+          _video(4000)
+            ..transition = TransitionType.crossfade
+            ..transitionMs = 1000,
+          _video(4000),
+        ],
+      );
       final args = buildExportArgs(project: p, settings: settings, outputPath: 'o.mp4');
       expect(args[args.indexOf('-t', args.indexOf('-filter_complex')) + 1], (p.durationMs / 1000).toStringAsFixed(3));
     });
 
     test('speed changes both video timing and audio tempo', () {
-      final g = graphOf(buildExportArgs(
-        project: VideoProject(clips: [_video(4000)..speed = 4]),
-        settings: settings,
-        outputPath: 'o.mp4',
-      ));
+      final g = graphOf(
+        buildExportArgs(
+          project: VideoProject(clips: [_video(4000)..speed = 4]),
+          settings: settings,
+          outputPath: 'o.mp4',
+        ),
+      );
       expect(g, contains('setpts=PTS/4.0000'));
       expect(g, contains('atempo=2,atempo=2'));
     });
@@ -362,9 +400,21 @@ void main() {
     });
 
     test('neutral clips skip the colour stage, graded clips include it', () {
-      final neutral = graphOf(buildExportArgs(project: VideoProject(clips: [_video(1000)]), settings: settings, outputPath: 'o.mp4'));
+      final neutral = graphOf(
+        buildExportArgs(
+          project: VideoProject(clips: [_video(1000)]),
+          settings: settings,
+          outputPath: 'o.mp4',
+        ),
+      );
       expect(neutral, isNot(contains('colorchannelmixer')));
-      final graded = graphOf(buildExportArgs(project: VideoProject(clips: [_video(1000)..grade.filterId = 'pop']), settings: settings, outputPath: 'o.mp4'));
+      final graded = graphOf(
+        buildExportArgs(
+          project: VideoProject(clips: [_video(1000)..grade.filterId = 'pop']),
+          settings: settings,
+          outputPath: 'o.mp4',
+        ),
+      );
       expect(graded, contains('format=rgba,colorchannelmixer='));
     });
 
@@ -376,7 +426,9 @@ void main() {
     });
 
     test('overlays composite during their time range in stacking order', () {
-      final a = CanvasLayer.text('a')..startMs = 500..endMs = 1500;
+      final a = CanvasLayer.text('a')
+        ..startMs = 500
+        ..endMs = 1500;
       final b = CanvasLayer.sticker('b');
       final args = buildExportArgs(
         project: VideoProject(clips: [_video(2000)], overlays: [a, b]),
@@ -409,7 +461,10 @@ void main() {
 
     test('music that starts after the end of the video is left out', () {
       final args = buildExportArgs(
-        project: VideoProject(clips: [_video(1000)], audio: [AudioTrack(path: 'm.mp3', name: 'm', sourceMs: 5000, startMs: 2000)]),
+        project: VideoProject(
+          clips: [_video(1000)],
+          audio: [AudioTrack(path: 'm.mp3', name: 'm', sourceMs: 5000, startMs: 2000)],
+        ),
         settings: settings,
         outputPath: 'o.mp4',
       );

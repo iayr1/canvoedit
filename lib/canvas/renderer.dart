@@ -34,25 +34,31 @@ class SceneRenderer {
   /// Turned off in tests, which have no network access for font downloads.
   static bool useGoogleFonts = true;
 
-  static TextStyle _textStyle(CanvasLayer l, double canvasWidth) {
+  static TextStyle _textStyle(CanvasLayer l, double canvasWidth, {Paint? foreground, Color? color, List<Shadow>? shadows}) {
     final base = TextStyle(
       fontSize: l.fontSize * canvasWidth,
-      color: Color(l.color),
+      color: foreground == null ? (color ?? Color(l.color)) : null,
+      foreground: foreground,
       fontWeight: l.bold ? FontWeight.w700 : FontWeight.w400,
       fontStyle: l.italic ? FontStyle.italic : FontStyle.normal,
       letterSpacing: l.letterSpacing * canvasWidth,
       height: 1.15,
-      shadows: l.shadow
-          ? [Shadow(color: Colors.black54, blurRadius: l.fontSize * canvasWidth * .18, offset: Offset(0, l.fontSize * canvasWidth * .05))]
-          : null,
+      shadows:
+          shadows ??
+          (l.shadow ? [Shadow(color: Colors.black54, blurRadius: l.fontSize * canvasWidth * .18, offset: Offset(0, l.fontSize * canvasWidth * .05))] : null),
     );
-    if (l.kind == LayerKind.sticker || !useGoogleFonts) return base;
+    if (l.kind == LayerKind.sticker) return base;
+    // Without Google Fonts, use the family by name, for fonts loaded another way.
+    if (!useGoogleFonts) return base.copyWith(fontFamily: l.fontFamily);
     return GoogleFonts.getFont(l.fontFamily, textStyle: base);
   }
 
-  static TextPainter _textPainter(CanvasLayer l, Size canvas) {
+  static TextPainter _textPainter(CanvasLayer l, Size canvas, {Paint? foreground, Color? color, List<Shadow>? shadows}) {
     return TextPainter(
-      text: TextSpan(text: l.text.isEmpty ? ' ' : l.text, style: _textStyle(l, canvas.width)),
+      text: TextSpan(
+        text: l.text.isEmpty ? ' ' : l.text,
+        style: _textStyle(l, canvas.width, foreground: foreground, color: color, shadows: shadows),
+      ),
       textAlign: const [TextAlign.left, TextAlign.center, TextAlign.right][l.align],
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: canvas.width * .96);
@@ -73,7 +79,7 @@ class SceneRenderer {
         return Size(w, w * l.aspect);
       case LayerKind.image:
         final w = l.width * canvas.width;
-        return Size(w, w * l.imageAspect);
+        return Size(w, w * (l.isFrame ? l.aspect : l.imageAspect));
       case LayerKind.stroke:
         return Size.zero;
     }
@@ -143,28 +149,101 @@ class SceneRenderer {
   }
 
   static void _paintText(Canvas c, Size canvas, CanvasLayer l, Size size) {
+    final fs = l.fontSize * canvas.width;
     if (l.bgColor != null) {
       final r = Rect.fromCenter(center: Offset.zero, width: size.width, height: size.height);
-      c.drawRRect(
-        RRect.fromRectAndRadius(r, Radius.circular(l.fontSize * canvas.width * .2)),
-        Paint()..color = Color(l.bgColor!),
+      final bg = Paint()..color = Color(l.bgColor!);
+      switch (l.kind == LayerKind.text ? l.bgStyle : 0) {
+        case 1:
+          c.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(r.height / 2)), bg);
+        case 2:
+          c.drawRect(r, bg);
+        case 3:
+          final skew = r.height * .28;
+          c.drawPath(
+            Path()
+              ..moveTo(r.left + skew, r.top)
+              ..lineTo(r.right + skew * .4, r.top)
+              ..lineTo(r.right - skew, r.bottom)
+              ..lineTo(r.left - skew * .4, r.bottom)
+              ..close(),
+            bg,
+          );
+        default:
+          c.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(fs * .2)), bg);
+      }
+    }
+    void draw({Paint? foreground, Color? color, List<Shadow>? shadows, Offset shift = Offset.zero}) {
+      final painter = _textPainter(l, canvas, foreground: foreground, color: color, shadows: shadows);
+      painter.paint(c, Offset(-painter.width / 2, -painter.height / 2) + shift);
+      painter.dispose();
+    }
+
+    if (l.kind == LayerKind.sticker) {
+      draw();
+      return;
+    }
+    if (l.popColor != null) draw(color: Color(l.popColor!), shadows: const [], shift: Offset(fs * .07, fs * .07));
+    if (l.glowColor != null) {
+      final glow = Color(l.glowColor!);
+      draw(
+        color: glow,
+        shadows: [
+          Shadow(color: glow, blurRadius: fs * .45),
+          Shadow(color: glow, blurRadius: fs * .18),
+        ],
       );
     }
-    final painter = _textPainter(l, canvas);
-    painter.paint(c, Offset(-painter.width / 2, -painter.height / 2));
-    painter.dispose();
+    if (l.strokeColor != null) {
+      draw(
+        foreground: Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = l.strokeWidth * fs * 2
+          ..color = Color(l.strokeColor!),
+        shadows: l.popColor != null || l.glowColor != null ? const [] : null,
+      );
+    }
+    final gradient = l.gradient;
+    if (gradient != null && gradient.length >= 2) {
+      final h = size.height / 2;
+      draw(
+        foreground: Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(0, -h),
+            Offset(0, h),
+            [for (final g in gradient) Color(g)],
+            [for (var i = 0; i < gradient.length; i++) i / (gradient.length - 1)],
+          ),
+        shadows: l.strokeColor != null || l.popColor != null || l.glowColor != null ? const [] : null,
+      );
+    } else {
+      draw(shadows: l.strokeColor != null || l.popColor != null || l.glowColor != null ? const [] : null);
+    }
   }
 
   static void _paintShape(Canvas c, Size canvas, CanvasLayer l, Size size) {
     final path = shapePath(l.shape, size);
     final fill = Paint()..color = Color(l.color);
     if (l.shape == ShapeKind.line) {
-      c.drawPath(path, fill..style = PaintingStyle.stroke..strokeWidth = math.max(1, l.strokeWidth * canvas.width)..strokeCap = StrokeCap.round);
+      c.drawPath(
+        path,
+        fill
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1, l.strokeWidth * canvas.width)
+          ..strokeCap = StrokeCap.round,
+      );
       return;
     }
     c.drawPath(path, fill);
     if (l.strokeColor != null) {
-      c.drawPath(path, Paint()..style = PaintingStyle.stroke..color = Color(l.strokeColor!)..strokeWidth = l.strokeWidth * canvas.width);
+      c.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = Color(l.strokeColor!)
+          ..strokeWidth = l.strokeWidth * canvas.width,
+      );
     }
   }
 
@@ -193,6 +272,13 @@ class SceneRenderer {
         return _polygon(10, w, h, innerRatio: .45);
       case ShapeKind.hexagon:
         return _polygon(6, w, h);
+      case ShapeKind.arch:
+        return Path()
+          ..moveTo(-w / 2, h / 2)
+          ..lineTo(-w / 2, -h / 2 + w / 2)
+          ..arcToPoint(Offset(w / 2, -h / 2 + w / 2), radius: Radius.circular(w / 2))
+          ..lineTo(w / 2, h / 2)
+          ..close();
       case ShapeKind.heart:
         return Path()
           ..moveTo(0, h * .5)
@@ -214,6 +300,10 @@ class SceneRenderer {
   }
 
   static void _paintImage(Canvas c, CanvasLayer l, Size size) {
+    if (l.isFrame) {
+      _paintFrame(c, l, size);
+      return;
+    }
     final rect = Rect.fromCenter(center: Offset.zero, width: size.width, height: size.height);
     final image = l.path == null ? null : ImageBank.instance.peek(l.path!);
     if (image == null) {
@@ -227,9 +317,7 @@ class SceneRenderer {
     c.clipRect(rect);
     c.scale(l.flipH ? -1 : 1, l.flipV ? -1 : 1);
     c.rotate(l.quarterTurns * math.pi / 2);
-    final dst = l.quarterTurns.isOdd
-        ? Rect.fromCenter(center: Offset.zero, width: size.height, height: size.width)
-        : rect;
+    final dst = l.quarterTurns.isOdd ? Rect.fromCenter(center: Offset.zero, width: size.height, height: size.width) : rect;
     final paint = Paint()..filterQuality = FilterQuality.high;
     if (!l.grade.isNeutral) paint.colorFilter = ColorFilter.matrix(l.grade.matrix);
     c.drawImageRect(image, src, dst, paint);
@@ -237,19 +325,65 @@ class SceneRenderer {
     paintVignette(c, rect, l.grade.vignette);
   }
 
+  /// A frame crops its picture to cover its shape, centred, so any photo fits.
+  static void _paintFrame(Canvas c, CanvasLayer l, Size size) {
+    final rect = Rect.fromCenter(center: Offset.zero, width: size.width, height: size.height);
+    final outline = shapePath(l.shape == ShapeKind.line ? ShapeKind.rectangle : l.shape, size);
+    final image = l.path == null ? null : ImageBank.instance.peek(l.path!);
+    c.save();
+    c.clipPath(outline);
+    if (image == null) {
+      if (l.path != null) ImageBank.instance.load(l.path!).ignore();
+      _paintFramePlaceholder(c, rect);
+      c.restore();
+      return;
+    }
+    final w = image.width.toDouble(), h = image.height.toDouble();
+    final frameRatio = rect.width / rect.height;
+    final src = w / h > frameRatio
+        ? Rect.fromCenter(center: Offset(w / 2, h / 2), width: h * frameRatio, height: h)
+        : Rect.fromCenter(center: Offset(w / 2, h / 2), width: w, height: w / frameRatio);
+    c.scale(l.flipH ? -1 : 1, l.flipV ? -1 : 1);
+    final paint = Paint()..filterQuality = FilterQuality.high;
+    if (!l.grade.isNeutral) paint.colorFilter = ColorFilter.matrix(l.grade.matrix);
+    c.drawImageRect(image, src, rect, paint);
+    c.restore();
+    c.save();
+    c.clipPath(outline);
+    paintVignette(c, rect, l.grade.vignette);
+    c.restore();
+  }
+
+  /// An empty frame: a soft panel with a picture icon.
+  static void _paintFramePlaceholder(Canvas c, Rect rect) {
+    c.drawRect(rect, Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [Color(0xFFE9E6F5), Color(0xFFD6D0EC)]));
+    final s = math.min(rect.width, rect.height) * .28;
+    final box = Rect.fromCenter(center: rect.center, width: s * 1.3, height: s);
+    final ink = Paint()..color = const Color(0xFF8E86B5);
+    c.drawRRect(
+      RRect.fromRectAndRadius(box, Radius.circular(s * .14)),
+      Paint()
+        ..color = const Color(0xFF8E86B5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * .08,
+    );
+    c.drawCircle(box.topLeft + Offset(box.width * .3, box.height * .32), s * .1, ink);
+    c.drawPath(
+      Path()
+        ..moveTo(box.left + box.width * .14, box.bottom - box.height * .16)
+        ..lineTo(box.left + box.width * .42, box.top + box.height * .5)
+        ..lineTo(box.left + box.width * .6, box.top + box.height * .68)
+        ..lineTo(box.left + box.width * .72, box.top + box.height * .56)
+        ..lineTo(box.right - box.width * .14, box.bottom - box.height * .16)
+        ..close(),
+      ink,
+    );
+  }
+
   static void paintVignette(Canvas c, Rect rect, double amount) {
     if (amount <= 0) return;
     final radius = rect.size.longestSide * .72;
-    c.drawRect(
-      rect,
-      Paint()
-        ..shader = ui.Gradient.radial(
-          rect.center,
-          radius,
-          [Colors.transparent, Colors.black.withValues(alpha: amount * .85)],
-          [.45, 1],
-        ),
-    );
+    c.drawRect(rect, Paint()..shader = ui.Gradient.radial(rect.center, radius, [Colors.transparent, Colors.black.withValues(alpha: amount * .85)], [.45, 1]));
   }
 
   static void _paintStroke(Canvas c, Size s, CanvasLayer l) {

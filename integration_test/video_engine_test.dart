@@ -6,9 +6,11 @@ import 'package:canvo_edit/canvas/layer.dart';
 import 'package:canvo_edit/canvas/renderer.dart';
 import 'package:canvo_edit/core/color/grade.dart';
 import 'package:canvo_edit/features/video/clip_tools.dart';
+import 'package:canvo_edit/features/video/effect_library.dart';
 import 'package:canvo_edit/features/video/export_engine_native.dart';
 import 'package:canvo_edit/features/video/ffmpeg_graph.dart';
 import 'package:canvo_edit/features/video/playback_engine.dart';
+import 'package:canvo_edit/features/video/transition_library.dart';
 import 'package:canvo_edit/features/video/video_project.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
@@ -103,9 +105,22 @@ void main() {
     clipSilent = '$dir/b.mp4';
     music = '$dir/music.m4a';
     await ffmpeg([
-      '-f', 'lavfi', '-i', 'color=c=0x804020:s=640x360:r=30:d=4',
-      '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4',
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', clipAudio,
+      '-f',
+      'lavfi',
+      '-i',
+      'color=c=0x804020:s=640x360:r=30:d=4',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=440:duration=4',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-shortest',
+      clipAudio,
     ]);
     await ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=s=360x640:r=24:d=3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clipSilent]);
     await ffmpeg(['-f', 'lavfi', '-i', 'sine=frequency=880:duration=8', '-c:a', 'aac', music]);
@@ -136,17 +151,25 @@ void main() {
   });
 
   testWidgets('a photo clip exports', (tester) async {
-    await exportAndCheck(VideoProject(clips: [VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 2000)]));
+    await exportAndCheck(
+      VideoProject(
+        clips: [VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 2000)],
+      ),
+    );
   });
 
   testWidgets('trim and fill export', (tester) async {
-    await exportAndCheck(VideoProject(clips: [
-      colorClip()
-        ..inMs = 1000
-        ..outMs = 2500
-        ..fit = ClipFit.fill
-        ..flipH = true,
-    ]));
+    await exportAndCheck(
+      VideoProject(
+        clips: [
+          colorClip()
+            ..inMs = 1000
+            ..outMs = 2500
+            ..fit = ClipFit.fill
+            ..flipH = true,
+        ],
+      ),
+    );
   });
 
   for (final speed in [.25, .5, 2.0, 4.0]) {
@@ -156,7 +179,15 @@ void main() {
   }
 
   testWidgets('hard cuts join clips of different sizes and rates', (tester) async {
-    await exportAndCheck(VideoProject(clips: [colorClip(), patternClip(), VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 1000)]));
+    await exportAndCheck(
+      VideoProject(
+        clips: [
+          colorClip(),
+          patternClip(),
+          VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 1000),
+        ],
+      ),
+    );
   });
 
   for (final type in TransitionType.values.where((t) => t != TransitionType.none)) {
@@ -165,25 +196,57 @@ void main() {
     });
   }
 
+  // One pattern of each kind, at each softness, through real FFmpeg.
+  for (final category in TransitionLibrary.categories.where((c) => c != 'Classic')) {
+    testWidgets('pattern transitions: $category export', (tester) async {
+      final presets = TransitionLibrary.instance.search(category: category);
+      for (final preset in [presets.first, presets[presets.length ~/ 2], presets.last]) {
+        final a = colorClip()..transitionMs = 600;
+        TransitionLibrary.apply(a, preset);
+        await exportAndCheck(VideoProject(clips: [a, patternClip()]));
+      }
+    });
+  }
+
+  testWidgets('every effect part exports', (tester) async {
+    final lib = EffectLibrary.instance;
+    final none = lib.byId('zin1.none.none')!.texture;
+    for (final m in lib.motions.where((m) => !m.isNone)) {
+      await exportAndCheck(VideoProject(clips: [colorClip()..effect = ClipEffect(m, none, lib.lights.first).id]));
+    }
+    for (final t in lib.textures.where((t) => !t.isNone)) {
+      await exportAndCheck(VideoProject(clips: [patternClip()..effect = ClipEffect(lib.motions.first, t, lib.lights.first).id]));
+    }
+    for (final l in lib.lights.where((l) => !l.isNone)) {
+      await exportAndCheck(VideoProject(clips: [colorClip()..effect = ClipEffect(lib.motions.first, none, l).id]));
+    }
+  });
+
   testWidgets('cut then transition then cut, mixing everything', (tester) async {
-    final p = VideoProject(clips: [
-      colorClip(),
-      patternClip()..transition = TransitionType.crossfade,
-      colorClip()
-        ..grade.filterId = 'teal_amber'
-        ..speed = 2
-        ..transition = TransitionType.slideLeft,
-      VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 2000),
-      patternClip(),
-    ], audio: [
-      AudioTrack(path: music, name: 'm', sourceMs: 8000, startMs: 1000, inMs: 500, durationMs: 5000, fadeInMs: 500, fadeOutMs: 500),
-    ]);
+    final p = VideoProject(
+      clips: [
+        colorClip(),
+        patternClip()..transition = TransitionType.crossfade,
+        colorClip()
+          ..grade.filterId = 'teal_amber'
+          ..speed = 2
+          ..transition = TransitionType.slideLeft,
+        VideoClip(path: photo, kind: ClipKind.image, sourceMs: 600000, outMs: 2000),
+        patternClip(),
+      ],
+      audio: [AudioTrack(path: music, name: 'm', sourceMs: 8000, startMs: 1000, inMs: 500, durationMs: 5000, fadeInMs: 500, fadeOutMs: 500)],
+    );
     await exportAndCheck(p);
   });
 
   testWidgets('landscape, 60 fps and music longer than the video', (tester) async {
     await exportAndCheck(
-      VideoProject(width: 1920, height: 1080, clips: [colorClip()], audio: [AudioTrack(path: music, name: 'm', sourceMs: 8000)]),
+      VideoProject(
+        width: 1920,
+        height: 1080,
+        clips: [colorClip()],
+        audio: [AudioTrack(path: music, name: 'm', sourceMs: 8000)],
+      ),
       width: 640,
       height: 360,
       fps: 60,
@@ -208,15 +271,11 @@ void main() {
   group('exported colour matches the preview matrix', () {
     List<int>? source;
 
-    Future<List<int>> sourcePixel() async => source ??= await pixelAt(
-      await exportAndCheck(VideoProject(clips: [colorClip()])),
-      1,
-    );
+    Future<List<int>> sourcePixel() async => source ??= await pixelAt(await exportAndCheck(VideoProject(clips: [colorClip()])), 1);
 
     void check(List<int> base, List<int> actual, ColorMatrix m, String name) {
       final expected = <double>[
-        for (var r = 0; r < 3; r++)
-          (m[r * 5] * base[0] + m[r * 5 + 1] * base[1] + m[r * 5 + 2] * base[2] + m[r * 5 + 4]).clamp(0.0, 255.0),
+        for (var r = 0; r < 3; r++) (m[r * 5] * base[0] + m[r * 5 + 1] * base[1] + m[r * 5 + 2] * base[2] + m[r * 5 + 4]).clamp(0.0, 255.0),
       ];
       debugPrint('COLOUR $name base=$base expected=${expected.map((e) => e.round()).toList()} actual=$actual');
       for (var i = 0; i < 3; i++) {
@@ -258,7 +317,10 @@ void main() {
       ..endMs = 2000;
     final png = await pngOf(360, 640, (c, s) => SceneRenderer.paintLayer(c, s, layer));
     final clip = colorClip()..fit = ClipFit.fill;
-    final out = await exportAndCheck(VideoProject(clips: [clip], overlays: [layer]), overlays: {layer.id: png});
+    final out = await exportAndCheck(
+      VideoProject(clips: [clip], overlays: [layer]),
+      overlays: {layer.id: png},
+    );
     final before = await pixelAt(out, .5);
     final during = await pixelAt(out, 1.5);
     final after = await pixelAt(out, 3);
@@ -282,7 +344,11 @@ void main() {
     expect(first, greaterThan(last + 100));
     final withSound = await ClipTools.reverse(colorClip(), (_) {});
     expect((await ExportEngine.probe(withSound.path)).hasAudio, isTrue);
-    await exportAndCheck(VideoProject(clips: [VideoClip(path: result.path, kind: ClipKind.video, sourceMs: result.durationMs)]));
+    await exportAndCheck(
+      VideoProject(
+        clips: [VideoClip(path: result.path, kind: ClipKind.video, sourceMs: result.durationMs)],
+      ),
+    );
   });
 
   testWidgets('denoise keeps the video and its trim points working', (tester) async {
@@ -300,10 +366,12 @@ void main() {
     expect(result.durationMs, closeTo(2000, 200));
     final info = (await FFprobeKit.getMediaInformation(result.path)).getMediaInformation()!;
     expect(info.getStreams().every((s) => s.getType() == 'audio'), isTrue);
-    await exportAndCheck(VideoProject(
-      clips: [colorClip()..volume = 0],
-      audio: [AudioTrack(path: result.path, name: 'a', sourceMs: result.durationMs)],
-    ));
+    await exportAndCheck(
+      VideoProject(
+        clips: [colorClip()..volume = 0],
+        audio: [AudioTrack(path: result.path, name: 'a', sourceMs: result.durationMs)],
+      ),
+    );
   });
 
   testWidgets('an image overlay exports where it was placed', (tester) async {
@@ -311,7 +379,10 @@ void main() {
     await SceneRenderer.prepare([CanvasLayer.image(image, 100, 100)]);
     final layer = CanvasLayer.image(image, 100, 100, width: .5);
     final png = await pngOf(360, 640, (c, s) => SceneRenderer.paintLayer(c, s, layer));
-    final out = await exportAndCheck(VideoProject(clips: [colorClip()..fit = ClipFit.fill], overlays: [layer]), overlays: {layer.id: png});
+    final out = await exportAndCheck(
+      VideoProject(clips: [colorClip()..fit = ClipFit.fill], overlays: [layer]),
+      overlays: {layer.id: png},
+    );
     expect((await pixelAt(out, 1))[1], greaterThan(200));
     expect((await pixelAt(out, 1, x: .05, y: .05))[1], lessThan(120));
   });
@@ -327,12 +398,14 @@ void main() {
   });
 
   testWidgets('the player follows the timeline across a cut', (tester) async {
-    final project = VideoProject(clips: [
-      colorClip()
-        ..inMs = 500
-        ..outMs = 2500,
-      patternClip(),
-    ]);
+    final project = VideoProject(
+      clips: [
+        colorClip()
+          ..inMs = 500
+          ..outMs = 2500,
+        patternClip(),
+      ],
+    );
     final engine = PlaybackEngine(() => project);
     addTearDown(engine.dispose);
     engine.refresh();
@@ -366,12 +439,14 @@ void main() {
   });
 
   testWidgets('two players run together during a transition', (tester) async {
-    final project = VideoProject(clips: [
-      colorClip()
-        ..transition = TransitionType.crossfade
-        ..transitionMs = 1500,
-      patternClip(),
-    ]);
+    final project = VideoProject(
+      clips: [
+        colorClip()
+          ..transition = TransitionType.crossfade
+          ..transitionMs = 1500,
+        patternClip(),
+      ],
+    );
     final engine = PlaybackEngine(() => project);
     addTearDown(engine.dispose);
     engine.refresh();

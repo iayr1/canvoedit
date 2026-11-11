@@ -18,7 +18,10 @@ enum TransitionType {
   wipeRight('Wipe right', 'wiperight'),
   slideLeft('Slide left', 'slideleft'),
   slideRight('Slide right', 'slideright'),
-  circleOpen('Circle open', 'circleopen');
+  circleOpen('Circle open', 'circleopen'),
+
+  /// A pattern from the transition library, named by [VideoClip.transitionPattern].
+  pattern('Pattern', 'custom');
 
   const TransitionType(this.label, this.xfade);
   final String label;
@@ -41,6 +44,8 @@ class VideoClip {
     Grade? grade,
     this.transition = TransitionType.none,
     this.transitionMs = 500,
+    this.transitionPattern,
+    this.effect,
     this.thumbnail,
   }) : id = id ?? newId(),
        outMs = outMs ?? sourceMs,
@@ -61,6 +66,8 @@ class VideoClip {
     grade: Grade.fromJson((j['grade'] as Map?)?.cast<String, dynamic>()),
     transition: TransitionType.values.byName(j['transition'] as String? ?? 'none'),
     transitionMs: j['transitionMs'] as int? ?? 500,
+    transitionPattern: j['transitionPattern'] as String?,
+    effect: j['effect'] as String?,
     thumbnail: j['thumbnail'] as String?,
   );
 
@@ -82,6 +89,12 @@ class VideoClip {
   /// Transition into the following clip.
   TransitionType transition;
   int transitionMs;
+
+  /// Library id of the pattern when [transition] is [TransitionType.pattern].
+  String? transitionPattern;
+
+  /// Library id of the clip's motion, texture and light effect, if any.
+  String? effect;
   String? thumbnail;
 
   /// Length this clip occupies on the timeline.
@@ -102,6 +115,8 @@ class VideoClip {
     'grade': grade.toJson(),
     'transition': transition.name,
     'transitionMs': transitionMs,
+    'transitionPattern': transitionPattern,
+    'effect': effect,
     'thumbnail': thumbnail,
   };
 
@@ -139,6 +154,9 @@ class AudioTrack {
     fadeInMs: j['fadeInMs'] as int? ?? 0,
     fadeOutMs: j['fadeOutMs'] as int? ?? 0,
   );
+
+  /// A separate copy of this track with a new identity.
+  AudioTrack duplicate() => AudioTrack.fromJson(toJson()..['id'] = newId());
 
   final String id;
   final String path;
@@ -268,13 +286,7 @@ class VideoProject {
       if (t < nextStart) return TimelineFrame(clip, _sourceTime(clip, t - start));
       if (overlap == 0) continue;
       final next = clips[i + 1];
-      return TimelineFrame(
-        clip,
-        _sourceTime(clip, t - start),
-        next: next,
-        nextTimeMs: _sourceTime(next, t - nextStart),
-        progress: (t - nextStart) / overlap,
-      );
+      return TimelineFrame(clip, _sourceTime(clip, t - start), next: next, nextTimeMs: _sourceTime(next, t - nextStart), progress: (t - nextStart) / overlap);
     }
     final last = clips.last;
     return TimelineFrame(last, last.outMs);

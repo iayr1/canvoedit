@@ -23,12 +23,9 @@ class MediaPicker {
     }
   }
 
-  static Future<XFile?> image({required void Function(String) onError}) =>
-      guard(() => _picker.pickImage(source: ImageSource.gallery), onError: onError);
+  static Future<XFile?> image({required void Function(String) onError}) => guard(() => _picker.pickImage(source: ImageSource.gallery), onError: onError);
 
-  static Future<List<XFile>> media({required void Function(String) onError}) async =>
-      await guard(_picker.pickMultipleMedia, onError: onError) ?? const [];
+  static Future<List<XFile>> media({required void Function(String) onError}) async => await guard(_picker.pickMultipleMedia, onError: onError) ?? const [];
 
-  static Future<XFile?> recordVideo({required void Function(String) onError}) =>
-      guard(() => _picker.pickVideo(source: ImageSource.camera), onError: onError);
+  static Future<XFile?> recordVideo({required void Function(String) onError}) => guard(() => _picker.pickVideo(source: ImageSource.camera), onError: onError);
 }

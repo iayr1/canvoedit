@@ -3,52 +3,53 @@ import '../core/media.dart';
 
 enum LayerKind { text, sticker, shape, image, stroke }
 
-enum ShapeKind { rectangle, rounded, circle, triangle, star, heart, hexagon, line }
+enum ShapeKind { rectangle, rounded, circle, triangle, star, heart, hexagon, line, arch }
 
 /// One element on a canvas. Positions and sizes are fractions of the canvas
 /// width and height, so a design renders identically at any resolution.
 class CanvasLayer {
   CanvasLayer({required this.kind, String? id, this.name = ''}) : id = id ?? newId();
 
-  factory CanvasLayer.text(String text, {String font = 'Poppins', double size = .08, int color = 0xFFFFFFFF}) =>
-      CanvasLayer(kind: LayerKind.text, name: 'Text')
-        ..text = text
-        ..fontFamily = font
-        ..fontSize = size
-        ..color = color;
+  factory CanvasLayer.text(String text, {String font = 'Poppins', double size = .08, int color = 0xFFFFFFFF}) => CanvasLayer(kind: LayerKind.text, name: 'Text')
+    ..text = text
+    ..fontFamily = font
+    ..fontSize = size
+    ..color = color;
 
-  factory CanvasLayer.sticker(String emoji) =>
-      CanvasLayer(kind: LayerKind.sticker, name: 'Sticker')
-        ..text = emoji
-        ..fontSize = .18;
+  factory CanvasLayer.sticker(String emoji) => CanvasLayer(kind: LayerKind.sticker, name: 'Sticker')
+    ..text = emoji
+    ..fontSize = .18;
 
-  factory CanvasLayer.shape(ShapeKind shape, {int fill = 0xFFFF5C39, double width = .4, double aspect = 1}) =>
-      CanvasLayer(kind: LayerKind.shape, name: 'Shape')
-        ..shape = shape
-        ..color = fill
+  factory CanvasLayer.shape(ShapeKind shape, {int fill = 0xFFFF5C39, double width = .4, double aspect = 1}) => CanvasLayer(kind: LayerKind.shape, name: 'Shape')
+    ..shape = shape
+    ..color = fill
+    ..width = width
+    ..aspect = aspect;
+
+  factory CanvasLayer.image(String path, int imageWidth, int imageHeight, {double width = .6}) => CanvasLayer(kind: LayerKind.image, name: 'Image')
+    ..path = path
+    ..imgW = imageWidth
+    ..imgH = imageHeight
+    ..width = width;
+
+  /// A photo frame: a fixed shape that a picture fills, cropped to fit. With no
+  /// [path] it shows a placeholder inviting the user to add a photo.
+  factory CanvasLayer.frame({String? path, ShapeKind mask = ShapeKind.rectangle, double width = .5, double aspect = 1}) =>
+      CanvasLayer(kind: LayerKind.image, name: 'Photo frame')
+        ..isFrame = true
+        ..path = path
+        ..shape = mask
         ..width = width
         ..aspect = aspect;
 
-  factory CanvasLayer.image(String path, int imageWidth, int imageHeight, {double width = .6}) =>
-      CanvasLayer(kind: LayerKind.image, name: 'Image')
-        ..path = path
-        ..imgW = imageWidth
-        ..imgH = imageHeight
-        ..width = width;
-
-  factory CanvasLayer.stroke(List<double> points, int color, double strokeWidth) =>
-      CanvasLayer(kind: LayerKind.stroke, name: 'Drawing')
-        ..points = points
-        ..color = color
-        ..strokeWidth = strokeWidth;
+  factory CanvasLayer.stroke(List<double> points, int color, double strokeWidth) => CanvasLayer(kind: LayerKind.stroke, name: 'Drawing')
+    ..points = points
+    ..color = color
+    ..strokeWidth = strokeWidth;
 
   factory CanvasLayer.fromJson(Map<String, dynamic> j) {
     double d(String k, double fallback) => (j[k] as num?)?.toDouble() ?? fallback;
-    return CanvasLayer(
-        kind: LayerKind.values.byName(j['kind'] as String),
-        id: j['id'] as String,
-        name: j['name'] as String? ?? '',
-      )
+    return CanvasLayer(kind: LayerKind.values.byName(j['kind'] as String), id: j['id'] as String, name: j['name'] as String? ?? '')
       ..cx = d('cx', .5)
       ..cy = d('cy', .5)
       ..width = d('width', .5)
@@ -57,6 +58,7 @@ class CanvasLayer {
       ..visible = j['visible'] as bool? ?? true
       ..locked = j['locked'] as bool? ?? false
       ..isBase = j['isBase'] as bool? ?? false
+      ..isFrame = j['isFrame'] as bool? ?? false
       ..startMs = j['startMs'] as int?
       ..endMs = j['endMs'] as int?
       ..text = j['text'] as String? ?? ''
@@ -69,6 +71,10 @@ class CanvasLayer {
       ..letterSpacing = d('letterSpacing', 0)
       ..shadow = j['shadow'] as bool? ?? false
       ..bgColor = j['bgColor'] as int?
+      ..bgStyle = j['bgStyle'] as int? ?? 0
+      ..gradient = (j['gradient'] as List?)?.map((e) => e as int).toList()
+      ..glowColor = j['glowColor'] as int?
+      ..popColor = j['popColor'] as int?
       ..shape = ShapeKind.values.byName(j['shape'] as String? ?? 'rectangle')
       ..aspect = d('aspect', 1)
       ..strokeColor = j['strokeColor'] as int?
@@ -104,6 +110,10 @@ class CanvasLayer {
   /// True for the full-frame photo in photo-editing mode.
   bool isBase = false;
 
+  /// True for photo frames, which keep their own shape and size whatever picture
+  /// fills them. [shape] is the frame's outline and [aspect] its proportions.
+  bool isFrame = false;
+
   /// Visible time range in video projects. Null means the whole timeline.
   int? startMs;
   int? endMs;
@@ -123,6 +133,20 @@ class CanvasLayer {
   double letterSpacing = 0;
   bool shadow = false;
   int? bgColor;
+
+  /// Background shape behind text: 0 rounded box, 1 pill, 2 square, 3 slanted tag.
+  int bgStyle = 0;
+
+  /// Text fill gradient, top to bottom. Replaces [color] when set.
+  List<int>? gradient;
+
+  /// Neon glow colour around text.
+  int? glowColor;
+
+  /// Colour of a hard offset shadow behind text, for a pop-art look.
+  int? popColor;
+
+  // Text outline: [strokeColor], with [strokeWidth] as a fraction of font size.
 
   // Shapes.
   ShapeKind shape = ShapeKind.rectangle;
@@ -184,6 +208,7 @@ class CanvasLayer {
     'visible': visible,
     'locked': locked,
     'isBase': isBase,
+    'isFrame': isFrame,
     'startMs': startMs,
     'endMs': endMs,
     'text': text,
@@ -196,6 +221,10 @@ class CanvasLayer {
     'letterSpacing': letterSpacing,
     'shadow': shadow,
     'bgColor': bgColor,
+    'bgStyle': bgStyle,
+    'gradient': gradient,
+    'glowColor': glowColor,
+    'popColor': popColor,
     'shape': shape.name,
     'aspect': aspect,
     'strokeColor': strokeColor,

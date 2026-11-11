@@ -1,4 +1,6 @@
 import '../../core/color/grade.dart';
+import 'effect_library.dart';
+import 'transition_library.dart';
 import 'video_project.dart';
 
 /// The video encoder arguments. Encoding is isolated here because the choice has
@@ -9,8 +11,7 @@ class VideoEncoder {
   final List<String> args;
 
   static const x264 = VideoEncoder(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20']);
-  static VideoEncoder hardwareAndroid(int bitrateMbps) =>
-      VideoEncoder(['-c:v', 'h264_mediacodec', '-b:v', '${bitrateMbps}M']);
+  static VideoEncoder hardwareAndroid(int bitrateMbps) => VideoEncoder(['-c:v', 'h264_mediacodec', '-b:v', '${bitrateMbps}M']);
 }
 
 class ExportSettings {
@@ -79,11 +80,13 @@ List<String> buildExportArgs({
   final clipInputs = <int>[];
   for (final clip in project.clips) {
     final sourceSeconds = _s(clip.outMs - clip.inMs);
-    clipInputs.add(addInput(
-      clip.kind == ClipKind.video
-          ? ['-ss', _s(clip.inMs), '-t', sourceSeconds, '-i', clip.path]
-          : ['-loop', '1', '-framerate', '$fps', '-t', sourceSeconds, '-i', clip.path],
-    ));
+    clipInputs.add(
+      addInput(
+        clip.kind == ClipKind.video
+            ? ['-ss', _s(clip.inMs), '-t', sourceSeconds, '-i', clip.path]
+            : ['-loop', '1', '-framerate', '$fps', '-t', sourceSeconds, '-i', clip.path],
+      ),
+    );
   }
 
   // Normalise every clip to the same size, rate, time base and format.
@@ -109,6 +112,8 @@ List<String> buildExportArgs({
         ..add('format=rgba')
         ..add(colorMixerFilter(clip.grade.matrix));
     }
+    final effect = EffectLibrary.instance.byId(clip.effect);
+    if (effect != null) filters.addAll(effectFilters(effect, width: w, height: h, fps: fps, durationMs: clip.durationMs));
     final vignette = vignettePngs[clip.id];
     if (vignette != null) {
       final vigInput = addInput(['-i', vignette]);
@@ -140,11 +145,11 @@ List<String> buildExportArgs({
   var timelineMs = project.clips.first.durationMs;
   for (var i = 1; i < project.clips.length; i++) {
     final overlap = project.transitionMsAfter(i - 1);
-    final kind = project.clips[i - 1].transition;
+    final preset = TransitionLibrary.instance.forClip(project.clips[i - 1]);
     final vOut = 'vj$i', aOut = 'aj$i';
     if (overlap > 0) {
       final offset = _s(timelineMs - overlap);
-      graph.add('[$videoLabel][v$i]xfade=transition=${kind.xfade}:duration=${_s(overlap)}:offset=$offset,settb=AVTB[$vOut]');
+      graph.add('[$videoLabel][v$i]xfade=transition=${preset!.xfadeTransition}:duration=${_s(overlap)}:offset=$offset,settb=AVTB[$vOut]');
       graph.add('[$audioLabel][a$i]acrossfade=d=${_s(overlap)}[$aOut]');
     } else {
       graph.add('[$videoLabel][v$i]concat=n=2:v=1:a=0,settb=AVTB[$vOut]');

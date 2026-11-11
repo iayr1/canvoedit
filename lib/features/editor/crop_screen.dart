@@ -48,14 +48,7 @@ class _CropScreenState extends State<CropScreen> {
   _Drag _drag = _Drag.none;
   Size _view = Size.zero;
 
-  static const _ratios = <String, double?>{
-    'Free': null,
-    '1:1': 1,
-    '4:5': 4 / 5,
-    '9:16': 9 / 16,
-    '16:9': 16 / 9,
-    '3:2': 3 / 2,
-  };
+  static const _ratios = <String, double?>{'Free': null, '1:1': 1, '4:5': 4 / 5, '9:16': 9 / 16, '16:9': 16 / 9, '3:2': 3 / 2};
 
   @override
   void initState() {
@@ -161,10 +154,7 @@ class _CropScreenState extends State<CropScreen> {
         case _Drag.none:
           return;
         case _Drag.move:
-          r = r.shift(Offset(
-            dx.clamp(-r.left, 1 - r.right),
-            dy.clamp(-r.top, 1 - r.bottom),
-          ));
+          r = r.shift(Offset(dx.clamp(-r.left, 1 - r.right), dy.clamp(-r.top, 1 - r.bottom)));
         case _Drag.topLeft:
           r = Rect.fromLTRB(r.left + dx, r.top + dy, r.right, r.bottom);
         case _Drag.topRight:
@@ -240,11 +230,7 @@ class _CropScreenState extends State<CropScreen> {
                   for (final e in _ratios.entries)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text(e.key),
-                        selected: _ratio == e.value,
-                        onSelected: (_) => _setRatio(e.value),
-                      ),
+                      child: ChoiceChip(label: Text(e.key), selected: _ratio == e.value, onSelected: (_) => _setRatio(e.value)),
                     ),
                 ],
               ),

@@ -74,10 +74,7 @@ void main() {
     final tagline = CanvasLayer.text('Photos. Videos. Designs.', font: 'Poppins', size: .036, color: 0xFFFF9B85);
     await SceneRenderer.prepare([title, tagline]);
     final image = await SceneRenderer.rasterize(1024, 500, (c, s) {
-      c.drawRect(
-        Offset.zero & s,
-        Paint()..shader = ui.Gradient.linear(Offset.zero, Offset(s.width, s.height), const [Color(0xFF0E0F13), Color(0xFF2A1F4A)]),
-      );
+      c.drawRect(Offset.zero & s, Paint()..shader = ui.Gradient.linear(Offset.zero, Offset(s.width, s.height), const [Color(0xFF0E0F13), Color(0xFF2A1F4A)]));
       title
         ..cx = .27
         ..cy = .42;
@@ -112,7 +109,10 @@ void main() {
     addTearDown(tester.view.reset);
     final key = GlobalKey();
     await tester.pumpWidget(
-      RepaintBoundary(key: key, child: MaterialApp(debugShowCheckedModeBanner: false, theme: buildTheme(), home: screen)),
+      RepaintBoundary(
+        key: key,
+        child: MaterialApp(debugShowCheckedModeBanner: false, theme: buildTheme(), home: screen),
+      ),
     );
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 250));
@@ -147,11 +147,7 @@ void main() {
         c.drawRect(
           Offset.zero & s,
           Paint()
-            ..shader = ui.Gradient.linear(Offset.zero, Offset(0, s.height * .72), const [
-              Color(0xFF28407A),
-              Color(0xFFE76F51),
-              Color(0xFFF4C27A),
-            ], [0, .62, 1]),
+            ..shader = ui.Gradient.linear(Offset.zero, Offset(0, s.height * .72), const [Color(0xFF28407A), Color(0xFFE76F51), Color(0xFFF4C27A)], [0, .62, 1]),
         );
         c.drawCircle(Offset(s.width * .68, s.height * .5), s.width * .13, Paint()..color = const Color(0xFFFFE9B0));
         c.drawRect(Rect.fromLTWH(0, s.height * .74, s.width, s.height * .26), Paint()..color = const Color(0xFF2A9D8F));

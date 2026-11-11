@@ -38,7 +38,7 @@ const templatePalettes = <TemplatePalette>[
   TemplatePalette(0xFFFFF7ED, 0xFFFFEDD5, 0xFF7C2D12, 0xFFC2410C, 0xFFFFFFFF),
 ];
 
-const _fontPairs = <(String, String)>[
+const templateFontPairs = <(String, String)>[
   ('Anton', 'Poppins'),
   ('Bebas Neue', 'Inter'),
   ('Playfair Display', 'Lora'),
@@ -51,8 +51,8 @@ const _fontPairs = <(String, String)>[
   ('Dancing Script', 'Lora'),
 ];
 
-class _Copy {
-  const _Copy(this.kicker, this.headline, this.sub, this.cta);
+class TemplateCopy {
+  const TemplateCopy(this.kicker, this.headline, this.sub, this.cta);
   final String kicker;
   final String headline;
   final String sub;
@@ -60,136 +60,136 @@ class _Copy {
 }
 
 /// Sample wording by topic. Users replace it, so it stays generic.
-const _topics = <String, List<_Copy>>{
+const templateTopicCopy = <String, List<TemplateCopy>>{
   'Sale': [
-    _Copy('LIMITED TIME', 'Mega\nSale', 'Up to 50% off everything', 'Shop now'),
-    _Copy('THIS WEEKEND', 'Flash\nDeals', 'New offers every hour', 'Grab yours'),
-    _Copy('END OF SEASON', 'Last\nChance', 'While stocks last', 'See offers'),
+    TemplateCopy('LIMITED TIME', 'Mega\nSale', 'Up to 50% off everything', 'Shop now'),
+    TemplateCopy('THIS WEEKEND', 'Flash\nDeals', 'New offers every hour', 'Grab yours'),
+    TemplateCopy('END OF SEASON', 'Last\nChance', 'While stocks last', 'See offers'),
   ],
   'Quote': [
-    _Copy('DAILY QUOTE', 'Start where\nyou are', 'Use what you have', '@yourname'),
-    _Copy('THINK ABOUT IT', 'Small steps\ncount', 'Every day, a little more', '@yourname'),
-    _Copy('A REMINDER', 'Be kind\nto yourself', 'You are doing fine', '@yourname'),
+    TemplateCopy('DAILY QUOTE', 'Start where\nyou are', 'Use what you have', '@yourname'),
+    TemplateCopy('THINK ABOUT IT', 'Small steps\ncount', 'Every day, a little more', '@yourname'),
+    TemplateCopy('A REMINDER', 'Be kind\nto yourself', 'You are doing fine', '@yourname'),
   ],
   'Birthday': [
-    _Copy('TODAY WE CELEBRATE', 'Happy\nBirthday', 'Wishing you the best year yet', 'With love'),
-    _Copy('YOU ARE INVITED', 'Birthday\nParty', 'Saturday, 7 PM at our place', 'RSVP'),
-    _Copy('ANOTHER YEAR', 'Cheers\nto You', 'May this year be your best', 'Celebrate'),
+    TemplateCopy('TODAY WE CELEBRATE', 'Happy\nBirthday', 'Wishing you the best year yet', 'With love'),
+    TemplateCopy('YOU ARE INVITED', 'Birthday\nParty', 'Saturday, 7 PM at our place', 'RSVP'),
+    TemplateCopy('ANOTHER YEAR', 'Cheers\nto You', 'May this year be your best', 'Celebrate'),
   ],
   'Wedding': [
-    _Copy('SAVE THE DATE', 'Together\nForever', 'Sunday, 14 February', 'Details inside'),
-    _Copy('PLEASE JOIN US', 'We Are\nGetting Married', 'Your name and partner', 'RSVP'),
-    _Copy('WITH GRATITUDE', 'Thank You\nFor Coming', 'Our hearts are full', 'Love, us'),
+    TemplateCopy('SAVE THE DATE', 'Together\nForever', 'Sunday, 14 February', 'Details inside'),
+    TemplateCopy('PLEASE JOIN US', 'We Are\nGetting Married', 'Your name and partner', 'RSVP'),
+    TemplateCopy('WITH GRATITUDE', 'Thank You\nFor Coming', 'Our hearts are full', 'Love, us'),
   ],
   'Event': [
-    _Copy('LIVE THIS MONTH', 'Night\nMarket', 'Food, music and makers', 'Get tickets'),
-    _Copy('JOIN US', 'Open Day\n2026', 'Saturday from 10 AM', 'Register'),
-    _Copy('ONE NIGHT ONLY', 'City\nLights', 'Doors open at 7 PM', 'Book now'),
+    TemplateCopy('LIVE THIS MONTH', 'Night\nMarket', 'Food, music and makers', 'Get tickets'),
+    TemplateCopy('JOIN US', 'Open Day\n2026', 'Saturday from 10 AM', 'Register'),
+    TemplateCopy('ONE NIGHT ONLY', 'City\nLights', 'Doors open at 7 PM', 'Book now'),
   ],
   'Podcast': [
-    _Copy('NEW EPISODE', 'The Long\nTalk', 'Honest stories every week', 'Listen now'),
-    _Copy('EPISODE 12', 'Ideas\nThat Stick', 'With your special guest', 'Play'),
-    _Copy('OUT NOW', 'Behind\nThe Mic', 'Available on all apps', 'Subscribe'),
+    TemplateCopy('NEW EPISODE', 'The Long\nTalk', 'Honest stories every week', 'Listen now'),
+    TemplateCopy('EPISODE 12', 'Ideas\nThat Stick', 'With your special guest', 'Play'),
+    TemplateCopy('OUT NOW', 'Behind\nThe Mic', 'Available on all apps', 'Subscribe'),
   ],
   'Fitness': [
-    _Copy('NEW PROGRAM', 'Stronger\nEvery Day', '30 days to a better you', 'Join today'),
-    _Copy('NO EXCUSES', 'Train\nHard', 'Classes start Monday', 'Sign up'),
-    _Copy('MORNING SESSION', 'Move\nYour Body', 'All levels welcome', 'Book a spot'),
+    TemplateCopy('NEW PROGRAM', 'Stronger\nEvery Day', '30 days to a better you', 'Join today'),
+    TemplateCopy('NO EXCUSES', 'Train\nHard', 'Classes start Monday', 'Sign up'),
+    TemplateCopy('MORNING SESSION', 'Move\nYour Body', 'All levels welcome', 'Book a spot'),
   ],
   'Food': [
-    _Copy('FRESH TODAY', 'Chef\nSpecial', 'Made from scratch daily', 'Order now'),
-    _Copy('NEW ON THE MENU', 'Taste\nThe Season', 'Try it this week', 'View menu'),
-    _Copy('HAPPY HOUR', 'Good Food\nGood Mood', 'Every day, 4 to 7 PM', 'Reserve'),
+    TemplateCopy('FRESH TODAY', 'Chef\nSpecial', 'Made from scratch daily', 'Order now'),
+    TemplateCopy('NEW ON THE MENU', 'Taste\nThe Season', 'Try it this week', 'View menu'),
+    TemplateCopy('HAPPY HOUR', 'Good Food\nGood Mood', 'Every day, 4 to 7 PM', 'Reserve'),
   ],
   'Travel': [
-    _Copy('NEXT STOP', 'Wander\nMore', 'Find your next escape', 'Plan a trip'),
-    _Copy('SUMMER GETAWAY', 'Island\nDays', 'Packages from your city', 'Book now'),
-    _Copy('TRAVEL DIARY', 'Lost in\nThe Hills', 'Notes from the road', 'Read more'),
+    TemplateCopy('NEXT STOP', 'Wander\nMore', 'Find your next escape', 'Plan a trip'),
+    TemplateCopy('SUMMER GETAWAY', 'Island\nDays', 'Packages from your city', 'Book now'),
+    TemplateCopy('TRAVEL DIARY', 'Lost in\nThe Hills', 'Notes from the road', 'Read more'),
   ],
   'Real Estate': [
-    _Copy('JUST LISTED', 'Your Dream\nHome', '3 bedrooms, great location', 'Book a visit'),
-    _Copy('OPEN HOUSE', 'Come\nSee It', 'Sunday from 11 AM', 'Get directions'),
-    _Copy('NOW SELLING', 'Modern\nLiving', 'Ready to move in', 'Enquire'),
+    TemplateCopy('JUST LISTED', 'Your Dream\nHome', '3 bedrooms, great location', 'Book a visit'),
+    TemplateCopy('OPEN HOUSE', 'Come\nSee It', 'Sunday from 11 AM', 'Get directions'),
+    TemplateCopy('NOW SELLING', 'Modern\nLiving', 'Ready to move in', 'Enquire'),
   ],
   'Education': [
-    _Copy('NOW ENROLLING', 'Learn\nSomething New', 'Courses for every level', 'Apply now'),
-    _Copy('FREE WORKSHOP', 'Five Quick\nTips', 'Learn in under an hour', 'Save a seat'),
-    _Copy('BACK TO SCHOOL', 'Study\nSmarter', 'Simple habits that work', 'Find out how'),
+    TemplateCopy('NOW ENROLLING', 'Learn\nSomething New', 'Courses for every level', 'Apply now'),
+    TemplateCopy('FREE WORKSHOP', 'Five Quick\nTips', 'Learn in under an hour', 'Save a seat'),
+    TemplateCopy('BACK TO SCHOOL', 'Study\nSmarter', 'Simple habits that work', 'Find out how'),
   ],
   'Music': [
-    _Copy('NEW SINGLE', 'Midnight\nDrive', 'Out everywhere Friday', 'Stream now'),
-    _Copy('ON TOUR', 'Live\nIn Concert', 'Tickets on sale now', 'Get tickets'),
-    _Copy('THE PLAYLIST', 'Late Night\nVibes', 'Fresh songs every week', 'Listen'),
+    TemplateCopy('NEW SINGLE', 'Midnight\nDrive', 'Out everywhere Friday', 'Stream now'),
+    TemplateCopy('ON TOUR', 'Live\nIn Concert', 'Tickets on sale now', 'Get tickets'),
+    TemplateCopy('THE PLAYLIST', 'Late Night\nVibes', 'Fresh songs every week', 'Listen'),
   ],
   'Fashion': [
-    _Copy('NEW COLLECTION', 'Style\nEdit', 'Fresh looks for the season', 'Shop the look'),
-    _Copy('JUST DROPPED', 'Street\nWear', 'Limited pieces only', 'Explore'),
-    _Copy('LOOKBOOK', 'Wear It\nYour Way', 'Everyday essentials', 'View all'),
+    TemplateCopy('NEW COLLECTION', 'Style\nEdit', 'Fresh looks for the season', 'Shop the look'),
+    TemplateCopy('JUST DROPPED', 'Street\nWear', 'Limited pieces only', 'Explore'),
+    TemplateCopy('LOOKBOOK', 'Wear It\nYour Way', 'Everyday essentials', 'View all'),
   ],
   'Technology': [
-    _Copy('NOW AVAILABLE', 'Meet the\nNew App', 'Faster, simpler, smarter', 'Download'),
-    _Copy('PRODUCT UPDATE', 'Version\n2.0', 'See what changed', 'Learn more'),
-    _Copy('TECH TALK', 'Build\nBetter', 'Tips for your next project', 'Read on'),
+    TemplateCopy('NOW AVAILABLE', 'Meet the\nNew App', 'Faster, simpler, smarter', 'Download'),
+    TemplateCopy('PRODUCT UPDATE', 'Version\n2.0', 'See what changed', 'Learn more'),
+    TemplateCopy('TECH TALK', 'Build\nBetter', 'Tips for your next project', 'Read on'),
   ],
   'Hiring': [
-    _Copy('JOIN OUR TEAM', 'We Are\nHiring', 'Roles open in every team', 'Apply today'),
-    _Copy('OPEN ROLE', 'Your Next\nJob', 'Remote friendly', 'See the role'),
-    _Copy('GROW WITH US', 'Careers\nStart Here', 'Interviews this month', 'Send your CV'),
+    TemplateCopy('JOIN OUR TEAM', 'We Are\nHiring', 'Roles open in every team', 'Apply today'),
+    TemplateCopy('OPEN ROLE', 'Your Next\nJob', 'Remote friendly', 'See the role'),
+    TemplateCopy('GROW WITH US', 'Careers\nStart Here', 'Interviews this month', 'Send your CV'),
   ],
   'Thank You': [
-    _Copy('FROM ALL OF US', 'Thank\nYou', 'We could not do it without you', 'With thanks'),
-    _Copy('10K STRONG', 'You Made\nThis Happen', 'Thanks for being here', 'Stay tuned'),
-    _Copy('GRATEFUL', 'Thanks\nA Lot', 'Your support means everything', 'Keep in touch'),
+    TemplateCopy('FROM ALL OF US', 'Thank\nYou', 'We could not do it without you', 'With thanks'),
+    TemplateCopy('10K STRONG', 'You Made\nThis Happen', 'Thanks for being here', 'Stay tuned'),
+    TemplateCopy('GRATEFUL', 'Thanks\nA Lot', 'Your support means everything', 'Keep in touch'),
   ],
   'Festival': [
-    _Copy('WARM WISHES', 'Happy\nDiwali', 'May your home be full of light', 'From our family'),
-    _Copy('SEASON\'S GREETINGS', 'Merry\nChristmas', 'Peace and joy to you', 'With love'),
-    _Copy('BLESSINGS TO YOU', 'Eid\nMubarak', 'Joy and peace to your family', 'Warm regards'),
+    TemplateCopy('WARM WISHES', 'Happy\nDiwali', 'May your home be full of light', 'From our family'),
+    TemplateCopy('SEASON\'S GREETINGS', 'Merry\nChristmas', 'Peace and joy to you', 'With love'),
+    TemplateCopy('BLESSINGS TO YOU', 'Eid\nMubarak', 'Joy and peace to your family', 'Warm regards'),
   ],
   'Giveaway': [
-    _Copy('ENTER TO WIN', 'Big\nGiveaway', 'Follow, like and tag a friend', 'Enter now'),
-    _Copy('WIN THIS', 'Free\nPrize', 'Winner announced Friday', 'Join in'),
-    _Copy('CONTEST', 'Your Turn\nTo Win', 'Three lucky winners', 'How to enter'),
+    TemplateCopy('ENTER TO WIN', 'Big\nGiveaway', 'Follow, like and tag a friend', 'Enter now'),
+    TemplateCopy('WIN THIS', 'Free\nPrize', 'Winner announced Friday', 'Join in'),
+    TemplateCopy('CONTEST', 'Your Turn\nTo Win', 'Three lucky winners', 'How to enter'),
   ],
   'Testimonial': [
-    _Copy('HAPPY CUSTOMER', 'Simply\nThe Best', 'Five stars from our clients', 'Read reviews'),
-    _Copy('WHAT THEY SAY', 'Worth\nEvery Penny', 'A customer in your city', 'See more'),
-    _Copy('REAL REVIEWS', 'Loved\nBy Many', 'Thousands of happy people', 'Try it'),
+    TemplateCopy('HAPPY CUSTOMER', 'Simply\nThe Best', 'Five stars from our clients', 'Read reviews'),
+    TemplateCopy('WHAT THEY SAY', 'Worth\nEvery Penny', 'A customer in your city', 'See more'),
+    TemplateCopy('REAL REVIEWS', 'Loved\nBy Many', 'Thousands of happy people', 'Try it'),
   ],
   'Announcement': [
-    _Copy('IMPORTANT', 'Big\nNews', 'Details coming very soon', 'Stay tuned'),
-    _Copy('WE MOVED', 'New\nAddress', 'Come see our new space', 'Find us'),
-    _Copy('UPDATE', 'Opening\nHours', 'Changing from next week', 'See times'),
+    TemplateCopy('IMPORTANT', 'Big\nNews', 'Details coming very soon', 'Stay tuned'),
+    TemplateCopy('WE MOVED', 'New\nAddress', 'Come see our new space', 'Find us'),
+    TemplateCopy('UPDATE', 'Opening\nHours', 'Changing from next week', 'See times'),
   ],
   'Coming Soon': [
-    _Copy('GET READY', 'Coming\nSoon', 'Something new is on the way', 'Notify me'),
-    _Copy('COUNTDOWN', 'Just\nDays Left', 'Mark your calendar', 'Set a reminder'),
-    _Copy('SNEAK PEEK', 'Almost\nHere', 'Be the first to know', 'Join the list'),
+    TemplateCopy('GET READY', 'Coming\nSoon', 'Something new is on the way', 'Notify me'),
+    TemplateCopy('COUNTDOWN', 'Just\nDays Left', 'Mark your calendar', 'Set a reminder'),
+    TemplateCopy('SNEAK PEEK', 'Almost\nHere', 'Be the first to know', 'Join the list'),
   ],
   'Beauty': [
-    _Copy('SELF CARE', 'Glow\nUp', 'Skin care made simple', 'Shop now'),
-    _Copy('NEW IN', 'Pure\nRadiance', 'Gentle on every skin type', 'Discover'),
-    _Copy('SALON DAY', 'Fresh\nLook', 'Book your appointment', 'Book now'),
+    TemplateCopy('SELF CARE', 'Glow\nUp', 'Skin care made simple', 'Shop now'),
+    TemplateCopy('NEW IN', 'Pure\nRadiance', 'Gentle on every skin type', 'Discover'),
+    TemplateCopy('SALON DAY', 'Fresh\nLook', 'Book your appointment', 'Book now'),
   ],
   'Gaming': [
-    _Copy('LIVE NOW', 'Game\nOn', 'Streaming every night', 'Watch live'),
-    _Copy('TOURNAMENT', 'Final\nRound', 'Top teams, big prizes', 'Register'),
-    _Copy('NEW VIDEO', 'Level\nUp', 'Tips to win every match', 'Watch now'),
+    TemplateCopy('LIVE NOW', 'Game\nOn', 'Streaming every night', 'Watch live'),
+    TemplateCopy('TOURNAMENT', 'Final\nRound', 'Top teams, big prizes', 'Register'),
+    TemplateCopy('NEW VIDEO', 'Level\nUp', 'Tips to win every match', 'Watch now'),
   ],
   'Motivation': [
-    _Copy('MONDAY MOOD', 'Keep\nGoing', 'Progress over perfection', 'You got this'),
-    _Copy('DREAM BIG', 'Dream\nBigger', 'Then work for it', 'Start today'),
-    _Copy('STAY FOCUSED', 'One Day\nAt a Time', 'Consistency wins', 'Keep moving'),
+    TemplateCopy('MONDAY MOOD', 'Keep\nGoing', 'Progress over perfection', 'You got this'),
+    TemplateCopy('DREAM BIG', 'Dream\nBigger', 'Then work for it', 'Start today'),
+    TemplateCopy('STAY FOCUSED', 'One Day\nAt a Time', 'Consistency wins', 'Keep moving'),
   ],
   'Business': [
-    _Copy('WHO WE ARE', 'Grow Your\nBusiness', 'Strategy that delivers', 'Contact us'),
-    _Copy('OUR SERVICES', 'Work\nSmarter', 'Plans for every budget', 'Get a quote'),
-    _Copy('FREE WEBINAR', 'Marketing\nMade Simple', 'Live this Thursday', 'Register'),
+    TemplateCopy('WHO WE ARE', 'Grow Your\nBusiness', 'Strategy that delivers', 'Contact us'),
+    TemplateCopy('OUR SERVICES', 'Work\nSmarter', 'Plans for every budget', 'Get a quote'),
+    TemplateCopy('FREE WEBINAR', 'Marketing\nMade Simple', 'Live this Thursday', 'Register'),
   ],
   'Kids': [
-    _Copy('STORY TIME', 'Fun\nFor All', 'Games, songs and crafts', 'Join us'),
-    _Copy('SUMMER CAMP', 'Play and\nLearn', 'Ages 5 to 12', 'Enrol now'),
-    _Copy('PARTY TIME', 'Kids\nCorner', 'Every Saturday morning', 'Come along'),
+    TemplateCopy('STORY TIME', 'Fun\nFor All', 'Games, songs and crafts', 'Join us'),
+    TemplateCopy('SUMMER CAMP', 'Play and\nLearn', 'Ages 5 to 12', 'Enrol now'),
+    TemplateCopy('PARTY TIME', 'Kids\nCorner', 'Every Saturday morning', 'Come along'),
   ],
 };
 
@@ -205,7 +205,7 @@ const _formats = <(String, int, int)>[
 class _Ctx {
   _Ctx(this.p, this.copy, this.display, this.body, this.width, this.height);
   final TemplatePalette p;
-  final _Copy copy;
+  final TemplateCopy copy;
   final String display;
   final String body;
   final int width;
@@ -222,8 +222,7 @@ class _Ctx {
         ..letterSpacing = spacing;
 
   CanvasLayer kicker(int color) => text(copy.kicker, 0, body, .03, color, bold: true, spacing: .006);
-  CanvasLayer headline(int color, {double maxWidth = .84}) =>
-      text(copy.headline, 0, display, templateHeadlineSize(copy.headline, maxWidth: maxWidth), color);
+  CanvasLayer headline(int color, {double maxWidth = .84}) => text(copy.headline, 0, display, templateHeadlineSize(copy.headline, maxWidth: maxWidth), color);
   CanvasLayer sub(int color) => text(copy.sub, 0, body, math.min(.04, .84 / (copy.sub.length * templateGlyphWidth)), color);
   CanvasLayer cta(int fg, int? bg) => text(copy.cta, 0, body, .036, fg, bold: true, bg: bg);
 
@@ -237,14 +236,12 @@ class _Ctx {
         ..strokeWidth = .008;
 
   /// A full-width bar [h] tall as a fraction of canvas height.
-  CanvasLayer band(double y, double h, int fill, {double opacity = 1}) =>
-      shape(ShapeKind.rectangle, .5, y, 1, fill, aspect: h * ratio, opacity: opacity);
+  CanvasLayer band(double y, double h, int fill, {double opacity = 1}) => shape(ShapeKind.rectangle, .5, y, 1, fill, aspect: h * ratio, opacity: opacity);
 
   /// Stacks [items] centred between [top] and [bottom] (fractions of height),
   /// shrinking every font in proportion if they don't fit. Line height is fixed
   /// by the renderer, so these heights are exact rather than estimated.
-  List<CanvasLayer> column(List<CanvasLayer> items, double top, double bottom, {double gap = .025}) =>
-      stackText(items, ratio, top, bottom, gap: gap);
+  List<CanvasLayer> column(List<CanvasLayer> items, double top, double bottom, {double gap = .025}) => stackText(items, ratio, top, bottom, gap: gap);
 }
 
 /// Height of a text layer as a fraction of canvas height.
@@ -322,11 +319,7 @@ final List<List<CanvasLayer> Function(_Ctx)> _layouts = [
   ],
   (c) => [
     c.shape(ShapeKind.rounded, .5, .5, .84, c.p.accent, aspect: .76 * c.ratio / .84),
-    ...c.column(
-      [c.kicker(c.p.onAccent), c.headline(c.p.onAccent, maxWidth: .7), c.sub(c.p.onAccent), c.cta(c.p.onAccent, null)],
-      .17,
-      .83,
-    ),
+    ...c.column([c.kicker(c.p.onAccent), c.headline(c.p.onAccent, maxWidth: .7), c.sub(c.p.onAccent), c.cta(c.p.onAccent, null)], .17, .83),
   ],
   (c) => [
     for (var i = 0; i < 5; i++)
@@ -362,10 +355,7 @@ final List<List<CanvasLayer> Function(_Ctx)> _layouts = [
   (c) {
     final size = math.min(.22, .2 * c.ratio);
     final h = size / c.ratio;
-    return [
-      c.shape(ShapeKind.hexagon, .5, .04 + h / 2, size, c.p.accent),
-      ...c.column(_all(c, c.p.ink), .07 + h, .96),
-    ];
+    return [c.shape(ShapeKind.hexagon, .5, .04 + h / 2, size, c.p.accent), ...c.column(_all(c, c.p.ink), .07 + h, .96)];
   },
   (c) {
     final items = c.column([c.kicker(c.p.ink), c.headline(c.p.ink), c.sub(c.p.ink)], .1, .9, gap: .07);
@@ -382,10 +372,10 @@ final List<List<CanvasLayer> Function(_Ctx)> _layouts = [
 List<DesignTemplate> _generate() {
   final out = <DesignTemplate>[];
   var topicIndex = 0;
-  _topics.forEach((topic, copies) {
+  templateTopicCopy.forEach((topic, copies) {
     for (var i = 0; i < _layouts.length; i++) {
       final palette = templatePalettes[(topicIndex * 7 + i * 3) % templatePalettes.length];
-      final fonts = _fontPairs[(topicIndex * 3 + i) % _fontPairs.length];
+      final fonts = templateFontPairs[(topicIndex * 3 + i) % templateFontPairs.length];
       final format = _formats[(topicIndex + i) % _formats.length];
       final copy = copies[i % copies.length];
       final layout = _layouts[i];
@@ -413,7 +403,10 @@ final List<DesignTemplate> allTemplates = [...featuredTemplates, ..._generate()]
 
 List<String> get templateTopics {
   final seen = <String>{};
-  return [for (final t in allTemplates) if (seen.add(t.category)) t.category];
+  return [
+    for (final t in allTemplates)
+      if (seen.add(t.category)) t.category,
+  ];
 }
 
 /// Matches name, topic or format, such as "story" or "wedding".

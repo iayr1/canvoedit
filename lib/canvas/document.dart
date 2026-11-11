@@ -4,11 +4,8 @@ import 'layer.dart';
 class CanvasBackground {
   CanvasBackground(this.color, {this.color2, this.angle = 90});
 
-  factory CanvasBackground.fromJson(Map<String, dynamic> j) => CanvasBackground(
-    j['color'] as int,
-    color2: j['color2'] as int?,
-    angle: (j['angle'] as num?)?.toDouble() ?? 90,
-  );
+  factory CanvasBackground.fromJson(Map<String, dynamic> j) =>
+      CanvasBackground(j['color'] as int, color2: j['color2'] as int?, angle: (j['angle'] as num?)?.toDouble() ?? 90);
 
   int color;
   int? color2;
@@ -40,9 +37,7 @@ class CanvasDocument {
     pixelWidth: j['pixelWidth'] as int,
     pixelHeight: j['pixelHeight'] as int,
     background: CanvasBackground.fromJson((j['background'] as Map).cast<String, dynamic>()),
-    layers: (j['layers'] as List)
-        .map((e) => CanvasLayer.fromJson((e as Map).cast<String, dynamic>()))
-        .toList(),
+    layers: (j['layers'] as List).map((e) => CanvasLayer.fromJson((e as Map).cast<String, dynamic>())).toList(),
   );
 
   final String id;

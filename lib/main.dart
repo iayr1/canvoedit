@@ -39,11 +39,6 @@ class CanvoEditApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Canvo Edit',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      home: const HomeScreen(),
-    );
+    return MaterialApp(title: 'Canvo Edit', debugShowCheckedModeBanner: false, theme: buildTheme(), home: const HomeScreen());
   }
 }

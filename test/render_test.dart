@@ -26,23 +26,22 @@ Future<void> _solidImage(String path, Color color) async {
 void main() {
   setUp(() => SceneRenderer.useGoogleFonts = false);
 
-  CanvasDocument photo(String path) => CanvasDocument(
-    pixelWidth: 40,
-    pixelHeight: 40,
-    isPhoto: true,
-    layers: [
-      CanvasLayer.image(path, 40, 40, width: 1)..isBase = true,
-    ],
-  );
+  CanvasDocument photo(String path) =>
+      CanvasDocument(pixelWidth: 40, pixelHeight: 40, isPhoto: true, layers: [CanvasLayer.image(path, 40, 40, width: 1)..isBase = true]);
 
   testWidgets('export uses the canvas pixel size and scale', (tester) async {
     await tester.runAsync(() async {
       final doc = CanvasDocument(pixelWidth: 100, pixelHeight: 50, background: CanvasBackground(0xFF102030));
       int? w, h;
-      final color = await _pixel(await SceneRenderer.exportPng(doc, scale: 2), 10, 10, size: (a, b) {
-        w = a;
-        h = b;
-      });
+      final color = await _pixel(
+        await SceneRenderer.exportPng(doc, scale: 2),
+        10,
+        10,
+        size: (a, b) {
+          w = a;
+          h = b;
+        },
+      );
       expect([w, h], [200, 100]);
       expect(color, [0x10, 0x20, 0x30, 255]);
     });

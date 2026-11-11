@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'artwork.dart';
+
 const _uuid = Uuid();
 String newId() => _uuid.v4();
 
@@ -52,8 +54,7 @@ class MediaLibrary {
     return target;
   }
 
-  static bool _isInside(String path, String dir) =>
-      path.replaceAll(r'\', '/').startsWith('${dir.replaceAll(r'\', '/')}/');
+  static bool _isInside(String path, String dir) => path.replaceAll(r'\', '/').startsWith('${dir.replaceAll(r'\', '/')}/');
 
   static Future<String?> _findIdentical(File source, Directory dir) async {
     final length = await source.length();
@@ -109,12 +110,7 @@ class MediaLibrary {
   /// read cancels the clean-up. Recent files are skipped because an editor may
   /// have imported one that it hasn't saved yet.
   @visibleForTesting
-  static Future<int> deleteUnusedMedia(
-    Directory media,
-    Directory projects, {
-    Duration grace = const Duration(minutes: 10),
-    DateTime? now,
-  }) async {
+  static Future<int> deleteUnusedMedia(Directory media, Directory projects, {Duration grace = const Duration(minutes: 10), DateTime? now}) async {
     if (!await media.exists()) return 0;
     final texts = <String>[];
     if (await projects.exists()) {
@@ -162,22 +158,24 @@ class ImageBank extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<ui.Image> load(String path) =>
-      _images.containsKey(path)
-          ? Future.value(_images[path])
-          : _pending[path] ??= _decode(path);
+  Future<ui.Image> load(String path) => _images.containsKey(path) ? Future.value(_images[path]) : _pending[path] ??= _decode(path);
 
   Future<ui.Image> _decode(String path) async {
     try {
+      final art = artworkFor(path);
+      if (art != null) {
+        final image = await renderArtwork(art.scene, art.width, art.height);
+        _images[path] = image;
+        notifyListeners();
+        return image;
+      }
       final bytes = await XFile(path).readAsBytes();
       final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
       final codec = await ui.instantiateImageCodecWithSize(
         buffer,
         getTargetSize: (w, h) {
           if (w <= _maxEdge && h <= _maxEdge) return const ui.TargetImageSize();
-          return w >= h
-              ? const ui.TargetImageSize(width: _maxEdge)
-              : const ui.TargetImageSize(height: _maxEdge);
+          return w >= h ? const ui.TargetImageSize(width: _maxEdge) : const ui.TargetImageSize(height: _maxEdge);
         },
       );
       final frame = await codec.getNextFrame();

@@ -19,8 +19,7 @@ void main() {
 
   tearDown(() => root.delete(recursive: true));
 
-  Future<File> write(Directory dir, String name, String content) =>
-      File('${dir.path}/$name').writeAsString(content);
+  Future<File> write(Directory dir, String name, String content) => File('${dir.path}/$name').writeAsString(content);
 
   group('storing picks', () {
     test('a new file is copied under a new name', () async {
@@ -121,7 +120,10 @@ void main() {
 
     test('the picker can be opened again afterwards, even after a failure', () async {
       final errors = <String>[];
-      await MediaPicker.guard<String>(() => throw PlatformException(code: 'camera_access_denied', message: 'Denied'), onError: errors.add);
+      await MediaPicker.guard<String>(
+        () => throw PlatformException(code: 'camera_access_denied', message: 'Denied'),
+        onError: errors.add,
+      );
       expect(errors, ['Denied']);
       expect(await MediaPicker.guard(() async => 'ok', onError: noError), 'ok');
     });

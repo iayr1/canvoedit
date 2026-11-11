@@ -4,7 +4,7 @@ import '../../app/theme.dart';
 import '../../core/crash_log.dart';
 import '../../core/output.dart';
 
-const appVersion = '1.0.0';
+const appVersion = '1.0.1';
 const sourceCodeUrl = 'https://github.com/iayr1/canvoedit';
 
 class AboutScreen extends StatelessWidget {

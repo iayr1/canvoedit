@@ -26,9 +26,7 @@ const _audioOut = ['-c:a', 'aac', '-b:a', '192k'];
 const reverseChunkMs = 1000;
 
 /// Start times, in the source file, of the chunks covering a clip's trim.
-List<int> reverseChunkStarts(VideoClip clip) => [
-  for (var t = clip.inMs; t < clip.outMs; t += reverseChunkMs) t,
-];
+List<int> reverseChunkStarts(VideoClip clip) => [for (var t = clip.inMs; t < clip.outMs; t += reverseChunkMs) t];
 
 List<String> reverseChunkArgs(VideoClip clip, int startMs, String out) => [
   '-y',
@@ -48,14 +46,7 @@ List<String> reverseChunkArgs(VideoClip clip, int startMs, String out) => [
 ];
 
 /// Sound is small enough to reverse whole, which avoids clicks at chunk joins.
-List<String> reverseAudioArgs(VideoClip clip, String out) => [
-  ..._trimmedInput(clip),
-  '-vn',
-  '-af',
-  'areverse',
-  ..._audioOut,
-  out,
-];
+List<String> reverseAudioArgs(VideoClip clip, String out) => [..._trimmedInput(clip), '-vn', '-af', 'areverse', ..._audioOut, out];
 
 /// Joins the reversed chunks, listed last-first in [listFile], with the
 /// reversed sound, without re-encoding either.

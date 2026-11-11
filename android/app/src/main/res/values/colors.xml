@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="canvo_ink">#0E0F13</color>
+    <!-- The home screen's header gradient, which the splash flows into. -->
+    <color name="canvo_splash">#6D3CF5</color>
+    <color name="canvo_splash_mid">#B13CF0</color>
+    <color name="canvo_splash_end">#FF5C8A</color>
+    <!-- The home screen's background, shown behind the app as it starts. -->
+    <color name="canvo_home">#F6F4FC</color>
 </resources>

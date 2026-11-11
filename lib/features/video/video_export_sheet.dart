@@ -1,5 +1,6 @@
 import 'dart:io' show File;
 import 'dart:ui' as ui;
+import '../shared/editor_chrome.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +48,13 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
   String? _status;
   String? _output;
   bool _cancelled = false;
+  late final _name = TextEditingController(text: widget.project.name);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
 
   Future<String> _writePng(ui.Image image, String path) async {
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -88,7 +96,7 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
         vignettes[clip.id] = await _writePng(image, '${dir.path}/vignette-${clip.id}.png');
       }
 
-      final output = '${dir.path}/${p.name.replaceAll(RegExp(r'[^\w-]+'), '_')}.mp4';
+      final output = '${dir.path}/${fileSafeName(p.name)}.mp4';
       final args = buildExportArgs(
         project: p,
         settings: ExportSettings(width: size.width, height: size.height, fps: _fps),
@@ -167,7 +175,15 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Export video', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const Text('Save your video', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          NameField(
+            controller: _name,
+            hint: 'Video name',
+            onChanged: (v) {
+              if (v.trim().isNotEmpty) widget.project.name = v.trim();
+            },
+          ),
           const SizedBox(height: 12),
           SegmentedButton<int>(
             segments: const [
@@ -189,9 +205,17 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
             onSelectionChanged: (s) => setState(() => _fps = s.first),
           ),
           const SizedBox(height: 8),
-          Text('${size.width} × ${size.height}, H.264 MP4', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
+          Text(
+            '${size.width} × ${size.height}, H.264 MP4',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted),
+          ),
           if (_shortEdge == 2160)
-            const Text('4K takes much longer and needs plenty of free storage.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, fontSize: 12)),
+            const Text(
+              '4K takes much longer and needs plenty of free storage.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
           const SizedBox(height: 14),
           FilledButton(
             onPressed: ExportEngine.isSupported ? _start : null,
@@ -221,7 +245,11 @@ class _VideoExportSheetState extends State<VideoExportSheet> {
         const SizedBox(height: 8),
         Text('${(_progress * 100).round()}%', textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        const Text('Keep the app open until this finishes.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, fontSize: 12)),
+        const Text(
+          'Keep the app open until this finishes.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.muted, fontSize: 12),
+        ),
         TextButton(onPressed: _cancel, child: const Text('Cancel')),
       ],
     );

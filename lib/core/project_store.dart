@@ -7,14 +7,7 @@ import 'package:path_provider/path_provider.dart';
 enum ProjectType { design, photo, video }
 
 class ProjectEntry {
-  ProjectEntry({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.updatedAt,
-    required this.data,
-    this.thumbnail,
-  });
+  ProjectEntry({required this.id, required this.name, required this.type, required this.updatedAt, required this.data, this.thumbnail});
 
   final String id;
   final String name;
@@ -23,13 +16,7 @@ class ProjectEntry {
   final Map<String, dynamic> data;
   final Uint8List? thumbnail;
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'type': type.name,
-    'updatedAt': updatedAt.toIso8601String(),
-    'data': data,
-  };
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'type': type.name, 'updatedAt': updatedAt.toIso8601String(), 'data': data};
 
   factory ProjectEntry.fromJson(Map<String, dynamic> j, Uint8List? thumbnail) => ProjectEntry(
     id: j['id'] as String,
@@ -68,9 +55,7 @@ class ProjectStore {
         try {
           final json = jsonDecode(await item.readAsString()) as Map<String, dynamic>;
           final thumb = File(item.path.replaceAll('.json', '.png'));
-          entries.add(
-            ProjectEntry.fromJson(json, await thumb.exists() ? await thumb.readAsBytes() : null),
-          );
+          entries.add(ProjectEntry.fromJson(json, await thumb.exists() ? await thumb.readAsBytes() : null));
         } on FormatException catch (e) {
           debugPrint('Skipping unreadable project ${item.path}: $e');
         }

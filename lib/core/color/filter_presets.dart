@@ -3,8 +3,7 @@ import 'grade.dart';
 /// A named look. Presets are original to Canvo Edit and are defined entirely by
 /// the same slider values users can set by hand.
 class FilterPreset {
-  FilterPreset(this.id, this.name, this.category, this.values)
-    : matrix = matrixFromValues(values);
+  FilterPreset(this.id, this.name, this.category, this.values) : matrix = matrixFromValues(values);
 
   final String id;
   final String name;
@@ -13,8 +12,7 @@ class FilterPreset {
   final ColorMatrix matrix;
 }
 
-FilterPreset _f(String name, String category, Map<String, double> values) =>
-    FilterPreset(name.toLowerCase().replaceAll(' ', '_'), name, category, values);
+FilterPreset _f(String name, String category, Map<String, double> values) => FilterPreset(name.toLowerCase().replaceAll(' ', '_'), name, category, values);
 
 final List<FilterPreset> filterPresets = [
   FilterPreset('original', 'Original', 'All', const {}),
@@ -172,5 +170,8 @@ FilterPreset filterById(String id) => _byId[id] ?? filterPresets.first;
 
 List<String> get filterCategories {
   final seen = <String>{};
-  return [for (final p in filterPresets) if (seen.add(p.category)) p.category];
+  return [
+    for (final p in filterPresets)
+      if (seen.add(p.category)) p.category,
+  ];
 }
